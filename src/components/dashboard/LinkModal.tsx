@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useProfileStore, LinkItem } from "@/store/useProfileStore";
 import { X, Sparkles, Link2 } from "lucide-react";
 import DynamicIcon from "@/components/common/DynamicIcon";
+import ProfileFillDropdown from "@/components/dashboard/ProfileFillDropdown";
+import { applyProfileFill } from "@/lib/quick-links";
 
 interface LinkModalProps {
   isOpen: boolean;
@@ -17,7 +19,7 @@ const PRESET_ICONS = [
 ];
 
 export default function LinkModal({ isOpen, onClose, linkToEdit }: LinkModalProps) {
-  const { addLink, updateLink } = useProfileStore();
+  const { profile, addLink, updateLink } = useProfileStore();
 
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
@@ -89,6 +91,13 @@ export default function LinkModal({ isOpen, onClose, linkToEdit }: LinkModalProp
 
         {/* Content Body */}
         <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+
+          <ProfileFillDropdown
+            profile={profile}
+            onSelect={(value) =>
+              applyProfileFill(value, profile, { setTitle, setSubtitle, setUrl })
+            }
+          />
           
           {/* Title */}
           <div>

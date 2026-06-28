@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useProfileStore } from "@/store/useProfileStore";
+import { supabase } from "@/lib/supabase";
+import AuthLoadingOverlay from "@/components/common/AuthLoadingOverlay";
 import {
   BarChart3,
   Link2,
@@ -43,6 +46,8 @@ export type PanelType =
   | "all-cards"
   | "products"
   | "social-profile"
+  | "hobbies-bio"
+  | "quick-links"
   | "custom-pages"
   | "integrations"
   | "settings-profile"
@@ -65,11 +70,13 @@ export default function AdminLayout({
   searchQuery,
   setSearchQuery,
 }: AdminLayoutProps) {
+  const router = useRouter();
   const { profile, saveStatus, syncWithCloud, loadFromCloud } = useProfileStore();
   const [copied, setCopied] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [isPrimaryCollapsed, setIsPrimaryCollapsed] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Sync profile from Supabase on mount
   useEffect(() => {
@@ -122,12 +129,25 @@ export default function AdminLayout({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleSignOut = async () => {
+    setProfileDropdownOpen(false);
+    setLoggingOut(true);
+
+    try {
+      await supabase.auth.signOut();
+      router.push("/login");
+    } catch (err) {
+      console.error(err);
+      setLoggingOut(false);
+    }
+  };
+
   // Derive primary category
   const getPrimaryCategory = (panel: PanelType): "dashboard" | "links" | "cards" | "workspaces" | "settings" => {
     if (panel === "dashboard" || panel === "traffic") return "dashboard";
-    if (panel === "links" || panel === "redirects") return "links";
+    if (panel === "links" || panel === "redirects" || panel === "canvas-edit") return "links";
     if (panel === "my-cards" || panel === "all-cards") return "cards";
-    if (panel === "products" || panel === "social-profile" || panel === "integrations" || panel === "canvas-edit") return "workspaces";
+    if (panel === "products" || panel === "social-profile" || panel === "hobbies-bio" || panel === "quick-links" || panel === "integrations") return "workspaces";
     return "settings";
   };
 
@@ -159,12 +179,14 @@ export default function AdminLayout({
     { id: "p6", label: "Ready-Made Card Templates", category: "Quick Navigation", action: () => setActivePanel("all-cards"), icon: Sparkles },
     { id: "p7", label: "Digital Products Store Workspace", category: "Quick Navigation", action: () => setActivePanel("products"), icon: Briefcase },
     { id: "p8", label: "Social Profiles Connection Workspace", category: "Quick Navigation", action: () => setActivePanel("social-profile"), icon: Globe },
+    { id: "p8.5", label: "Hobbies & Bio Editor Workspace", category: "Quick Navigation", action: () => setActivePanel("hobbies-bio"), icon: Smile },
+    { id: "p8.6", label: "Quick Pinned Links Workspace", category: "Quick Navigation", action: () => setActivePanel("quick-links"), icon: Bookmark },
     { id: "p9", label: "API Integrations Panel", category: "Quick Navigation", action: () => setActivePanel("integrations"), icon: Settings },
     { id: "p10", label: "Configure Profile Identity Info", category: "Quick Navigation", action: () => setActivePanel("settings-profile"), icon: User },
     { id: "p11", label: "Billing & Subscription Tiers", category: "Quick Navigation", action: () => setActivePanel("settings-billing"), icon: CreditCard },
     { id: "p12", label: "Security Credentials Configuration", category: "Quick Navigation", action: () => setActivePanel("settings-security"), icon: Shield },
     { id: "s1", label: "Copy Public Profile Link", category: "Shortcuts & Actions", action: () => handleCopyLink(), icon: Copy },
-    { id: "s2", label: "Exit Sanctuary Dashboard", category: "Shortcuts & Actions", action: () => { window.location.href = "/login"; }, icon: LogOut },
+    { id: "s2", label: "Exit Sanctuary Dashboard", category: "Shortcuts & Actions", action: () => handleSignOut(), icon: LogOut },
   ];
 
   const filteredPaletteItems = paletteItems.filter((item) =>
@@ -337,9 +359,9 @@ export default function AdminLayout({
                 Products Store
               </button>
               <button
-                onClick={() => setActivePanel("canvas-edit")}
+                onClick={() => setActivePanel("hobbies-bio")}
                 className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-black transition-all cursor-pointer ${
-                  activePanel === "canvas-edit"
+                  activePanel === "hobbies-bio"
                     ? "bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm border border-slate-200 dark:border-slate-700"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
                 }`}
@@ -348,27 +370,38 @@ export default function AdminLayout({
                 Hobbies & Bio
               </button>
               <button
+                onClick={() => setActivePanel("quick-links")}
+                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                  activePanel === "quick-links"
+                    ? "bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm border border-slate-200 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+                }`}
+              >
+                <Bookmark className="w-4 h-4 shrink-0" />
+                Quick Links
+              </button>
+              <button
                 onClick={() => setActivePanel("social-profile")}
                 className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-black transition-all cursor-pointer ${
                   activePanel === "social-profile"
                     ? "bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm border border-slate-200 dark:border-slate-700"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
                 }`}
               >
                 <Globe className="w-4 h-4 shrink-0" />
                 Social Profiles
               </button>
-              <button
+              {/* <button
                 onClick={() => setActivePanel("integrations")}
                 className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-black transition-all cursor-pointer ${
                   activePanel === "integrations"
                     ? "bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm border border-slate-200 dark:border-slate-700"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-250 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
                 }`}
               >
                 <Settings className="w-4 h-4 shrink-0" />
                 Integrations
-              </button>
+              </button> */}
             </div>
           </>
         );
@@ -421,6 +454,12 @@ export default function AdminLayout({
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans transition-colors duration-300">
+      {loggingOut && (
+        <AuthLoadingOverlay
+          message="Signing you out"
+          submessage="Securing your sanctuary session"
+        />
+      )}
       
       {/* 1. PRIMARY SIDEBAR (COLLAPSABLE & ALIGNED TOP) */}
       <aside className={`hidden md:flex flex-col bg-slate-900 dark:bg-slate-950 text-slate-400 justify-between shrink-0 py-6 border-r border-slate-800/80 relative z-20 shadow-lg transition-all duration-300 ${
@@ -503,9 +542,11 @@ export default function AdminLayout({
           </button>
           
           {/* Exit / Sign Out */}
-          <Link
-            href="/login"
-            className={`w-full py-2.5 rounded-xl hover:bg-rose-950/20 flex items-center text-rose-500 transition-all ${
+          <button
+            type="button"
+            onClick={handleSignOut}
+            disabled={loggingOut}
+            className={`w-full py-2.5 rounded-xl hover:bg-rose-950/20 flex items-center text-rose-500 transition-all cursor-pointer disabled:opacity-50 ${
               isPrimaryCollapsed ? "justify-center" : "px-4 gap-3.5"
             }`}
             title="Exit Admin"
@@ -514,7 +555,7 @@ export default function AdminLayout({
             {!isPrimaryCollapsed && (
               <span className="text-xs font-black tracking-tight animate-fadeIn">Exit Sanctuary</span>
             )}
-          </Link>
+          </button>
         </div>
 
       </aside>
@@ -528,7 +569,7 @@ export default function AdminLayout({
       <div className="flex-grow flex flex-col min-w-0 overflow-hidden">
         
         {/* Top Header Panel */}
-        <header className="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between z-30">
+        <header className="h-24 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between z-30">
           
           <div className="flex items-center gap-8">
             {/* Mobile panel indicator */}
@@ -606,35 +647,6 @@ export default function AdminLayout({
                 </div>
               )}
             </div>
-
-            {/* Cloud Sync Status & Action */}
-            <div className="hidden sm:flex items-center gap-3">
-              <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                saveStatus === "saving"
-                  ? "bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 animate-pulse"
-                  : saveStatus === "saved"
-                  ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400"
-                  : saveStatus === "error"
-                  ? "bg-rose-100 dark:bg-rose-950/40 text-rose-650"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-              }`}>
-                {saveStatus === "saving" && "Syncing..."}
-                {saveStatus === "saved" && "Cloud Synced"}
-                {saveStatus === "error" && "Sync Error"}
-                {saveStatus === "idle" && "Cloud Connected"}
-              </span>
-              <button
-                onClick={syncWithCloud}
-                disabled={saveStatus === "saving"}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50/50 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 border border-indigo-200/40 dark:border-indigo-850 rounded-xl text-[10px] font-black text-indigo-700 dark:text-indigo-400 transition-colors cursor-pointer disabled:opacity-50"
-                title="Sync local modifications to Supabase database"
-              >
-                <span className={`material-symbols-outlined text-[12px] ${saveStatus === "saving" ? "animate-spin" : ""}`}>
-                  sync
-                </span>
-                Sync Now
-              </button>
-            </div>
             
             {/* Profile Dropdown Chip */}
             <div className="relative">
@@ -693,13 +705,15 @@ export default function AdminLayout({
                       {copied ? "Copied to Clipboard" : "Copy Profile Link"}
                     </button>
                     <div className="h-px bg-slate-200 dark:bg-slate-800 my-1.5" />
-                    <Link
-                      href="/login"
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-450"
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      disabled={loggingOut}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-450 cursor-pointer disabled:opacity-50"
                     >
                       <LogOut className="w-4.5 h-4.5 text-rose-500" />
                       Sign Out
-                    </Link>
+                    </button>
                   </div>
                 </div>
               )}

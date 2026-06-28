@@ -165,10 +165,15 @@ export default function OnboardingPage() {
     };
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       const res = await fetch(`/api/profile/${lowerUsername}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify({
+          ...profileData,
+          userId: user?.id ?? null,
+        }),
       });
 
       if (!res.ok) {

@@ -4,6 +4,7 @@ import { useProfileStore } from "@/store/useProfileStore";
 import DynamicIcon from "@/components/common/DynamicIcon";
 import { ArrowRight } from "lucide-react";
 import { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
+import QuickLinksRow from "@/components/dashboard/QuickLinksRow";
 
 interface PreviewDeviceProps {
   viewMode?: "mobile" | "tablet" | "desktop";
@@ -107,16 +108,16 @@ export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProp
                 </div>
               )}
             </div>
-
-            {profile.verified && (
-              <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-2 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
-                <span className="material-symbols-outlined text-[9px] font-fill-1">verified</span>
-                <span className="text-[7px] font-black tracking-wider uppercase">VERIFIED</span>
-              </div>
-            )}
           </div>
 
-          <h2 className="text-lg font-extrabold tracking-tight mb-1">{profile.name}</h2>
+          <h2 className="text-lg font-extrabold tracking-tight mb-1 flex items-center justify-center gap-1.5">
+            <span>{profile.name}</span>
+            {profile.verified && (
+              <span className="material-symbols-outlined text-[14px] text-emerald-500 font-fill-1 shrink-0" title="Verified Account">
+                verified
+              </span>
+            )}
+          </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium px-4 leading-relaxed line-clamp-3">
             {profile.bio}
           </p>
@@ -127,6 +128,14 @@ export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProp
               <span>Exploring: {profile.currentlyExploring}</span>
             </div>
           )}
+
+          <QuickLinksRow
+            profile={profile}
+            compact
+            getCardClasses={() =>
+              "bg-white/75 dark:bg-slate-900/60 border border-outline-variant/10 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-900"
+            }
+          />
 
           {/* Social Icons row */}
           <div className="flex justify-center gap-3 mt-4 flex-wrap max-w-[280px]">

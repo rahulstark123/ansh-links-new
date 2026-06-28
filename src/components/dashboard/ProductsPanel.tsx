@@ -15,6 +15,13 @@ export default function ProductsPanel() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState<ProductItem | null>(null);
 
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const productsList = profile.products || [];
 
   const handleOpenCreate = () => {
@@ -27,8 +34,21 @@ export default function ProductsPanel() {
     setModalOpen(true);
   };
 
-  const handleToggleActive = (product: ProductItem) => {
-    updateProduct(product.id, { active: !product.active });
+  const handleToggleActive = async (product: ProductItem) => {
+    try {
+      const res = await fetch(`/api/products/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !product.active }),
+      });
+      if (!res.ok) throw new Error("Failed to toggle product status");
+      const updated = await res.json();
+      updateProduct(product.id, updated);
+      showToast(updated.active ? "Product activated!" : "Product set to draft!", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Error updating product: " + (err as Error).message, "error");
+    }
   };
 
   const handleOpenDelete = (product: ProductItem) => {
@@ -36,10 +56,20 @@ export default function ProductsPanel() {
     setIsConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingProduct) {
-      removeProduct(deletingProduct.id);
-      setDeletingProduct(null);
+      try {
+        const res = await fetch(`/api/products/${deletingProduct.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete product");
+        removeProduct(deletingProduct.id);
+        setDeletingProduct(null);
+        showToast("Product deleted successfully!", "success");
+      } catch (err) {
+        console.error(err);
+        showToast("Error deleting product: " + (err as Error).message, "error");
+      }
     }
   };
 
@@ -179,6 +209,7 @@ export default function ProductsPanel() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         productToEdit={editingProduct}
+        showToast={showToast}
       />
 
       {/* Custom Delete Confirmation Modal */}
@@ -188,6 +219,14 @@ export default function ProductsPanel() {
         onConfirm={handleConfirmDelete}
         itemName={deletingProduct?.name}
       />
+
+      {/* Custom Toast Notification Overlay */}
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[1050] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border bg-white dark:bg-slate-900 border-outline-variant/10 animate-slideDown font-bold text-xs select-none">
+          <div className={`w-2.5 h-2.5 rounded-full ${toast.type === "success" ? "bg-emerald-500 shadow-sm" : "bg-rose-500 shadow-sm"}`} />
+          <span className="text-slate-800 dark:text-slate-200">{toast.message}</span>
+        </div>
+      )}
 
     </div>
   );

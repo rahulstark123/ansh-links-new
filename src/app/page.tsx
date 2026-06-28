@@ -656,12 +656,6 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href="/signup"
-                  className="w-full text-center py-3.5 rounded-2xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all duration-300 text-xs cursor-pointer"
-                >
-                  Get Started Free
-                </Link>
               </motion.div>
 
               {/* Pro Card */}
@@ -700,12 +694,6 @@ export default function Home() {
                       ))}
                     </ul>
                   </div>
-                  <Link
-                    href="/signup"
-                    className="w-full text-center py-3.5 rounded-2xl font-bold text-white primary-gradient shadow-lg shadow-indigo-600/20 hover:scale-[0.98] transition-transform text-xs cursor-pointer block"
-                  >
-                    Get 14-day Free Trial
-                  </Link>
                 </div>
               </motion.div>
 
@@ -738,12 +726,6 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href="/signup"
-                  className="w-full text-center py-3.5 rounded-2xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all duration-300 text-xs cursor-pointer"
-                >
-                  Choose Pro Plus
-                </Link>
               </motion.div>
             </div>
           </div>

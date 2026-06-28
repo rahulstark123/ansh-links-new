@@ -9,6 +9,8 @@ import MyCardsPanel from "@/components/dashboard/MyCardsPanel";
 import AllCardsPanel from "@/components/dashboard/AllCardsPanel";
 import ProductsPanel from "@/components/dashboard/ProductsPanel";
 import SocialProfilePanel from "@/components/dashboard/SocialProfilePanel";
+import HobbiesBioPanel from "@/components/dashboard/HobbiesBioPanel";
+import QuickLinksPanel from "@/components/dashboard/QuickLinksPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import TrafficLogsPanel from "@/components/dashboard/TrafficLogsPanel";
@@ -41,6 +43,10 @@ export default function DashboardPage() {
         return <ProductsPanel />;
       case "social-profile":
         return <SocialProfilePanel />;
+      case "hobbies-bio":
+        return <HobbiesBioPanel />;
+      case "quick-links":
+        return <QuickLinksPanel />;
       case "integrations":
         return <IntegrationsPanel />;
       case "settings-profile":

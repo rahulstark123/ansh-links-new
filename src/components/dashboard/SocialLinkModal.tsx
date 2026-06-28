@@ -103,10 +103,10 @@ export default function SocialLinkModal({ isOpen, onClose, onSave, linkToEdit }:
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
+    <div className="fixed inset-0 z-[1050] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
       
       {/* Modal Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-350 dark:border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-350 dark:border-slate-800 w-full max-w-md rounded-3xl shadow-2xl flex flex-col transition-colors duration-300 relative">
         
         {/* Header */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800">
@@ -219,7 +219,7 @@ export default function SocialLinkModal({ isOpen, onClose, onSave, linkToEdit }:
         </div>
 
         {/* Footer Actions */}
-        <div className="h-20 flex items-center justify-end px-6 gap-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="h-20 flex items-center justify-end px-6 gap-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 rounded-b-3xl">
           <button
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-800 hover:bg-slate-100 text-xs font-extrabold text-slate-600 dark:text-slate-300 transition-all cursor-pointer"

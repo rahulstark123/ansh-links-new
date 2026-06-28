@@ -24,6 +24,12 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
 
   // Social account quick modal state
   const [socialModalOpen, setSocialModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 2500);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -36,7 +42,16 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
   if (!isOpen || !mounted) return null;
 
   const handleCreate = () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      showToast("Link Name / Title is required!", "error");
+      return;
+    }
+
+    const suffix = url.replace(new RegExp(`^https?:\\/\\/ansh\\.links\\/${profile.username || "username"}\\/`), "").trim();
+    if (!suffix) {
+      showToast("Destination URL path is required!", "error");
+      return;
+    }
 
     addLink({
       title: title.trim(),
@@ -46,6 +61,8 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
       active: true,
     });
 
+    showToast("Bio link created successfully!", "success");
+
     setTimeout(() => {
       const currentLinks = useProfileStore.getState().profile.links;
       const newlyAdded = currentLinks[currentLinks.length - 1];
@@ -54,7 +71,7 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
       } else {
         onClose();
       }
-    }, 50);
+    }, 1500);
   };
 
   const handleSaveSocial = (socialData: any) => {
@@ -166,8 +183,7 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
           </button>
           <button
             onClick={handleCreate}
-            disabled={!title.trim()}
-            className="px-6 py-2.5 rounded-xl text-white primary-gradient text-xs font-bold font-sans shadow-lg shadow-indigo-600/10 hover:scale-[0.98] transition-transform disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+            className="px-6 py-2.5 rounded-xl text-white primary-gradient text-xs font-bold font-sans shadow-lg shadow-indigo-600/10 hover:scale-[0.98] transition-transform cursor-pointer"
           >
             Create & Customize
           </button>
@@ -182,6 +198,14 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
         onSave={handleSaveSocial}
         linkToEdit={null}
       />
+
+      {/* Custom Toast Notification Overlay */}
+      {toast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[1050] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border bg-white dark:bg-slate-900 border-outline-variant/10 animate-slideDown font-bold text-xs select-none">
+          <div className={`w-2.5 h-2.5 rounded-full ${toast.type === "success" ? "bg-emerald-500 shadow-sm" : "bg-rose-500 shadow-sm"}`} />
+          <span className="text-slate-800 dark:text-slate-200">{toast.message}</span>
+        </div>
+      )}
 
     </div>,
     document.body

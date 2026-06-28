@@ -8,50 +8,77 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Profile {
-  id                 String        @id @default(uuid())
-  wid                Int           @unique @default(autoincrement())
-  name               String        @default("Ansh Kumar")
-  username           String        @unique @default("ansh")
-  bio                String        @default("")
-  avatar             String        @default("")
-  verified           Boolean       @default(true)
-  theme              String        @default("organic")
-  bgStyle            String        @default("mesh")
-  upiId              String?
-  whatsappNumber     String?
-  hobbies            String[]      @default([])
-  currentlyExploring String?
-  trialEndsAt        DateTime      @default(now())
-  subscriptionStatus String        @default("trial")
+model Workspace {
+  wid                Int            @id @default(autoincrement())
+  userId             String?        @unique
+  trialEndsAt        DateTime       @default(now())
+  subscriptionStatus String         @default("trial")
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  profile            Profile?
   links              Link[]
   socialLinks        SocialLink[]
   cards              DigitalCard[]
   products           Product[]
   integrations       Integration[]
+  trafficEvents      TrafficEvent[]
+}
+
+model Profile {
+  id                 String         @id @default(uuid())
+  wid                Int            @unique
+  workspace          Workspace      @relation(fields: [wid], references: [wid], onDelete: Cascade)
+  name               String         @default("Ansh Kumar")
+  username           String         @unique @default("ansh")
+  bio                String         @default("")
+  avatar             String         @default("")
+  verified           Boolean        @default(true)
+  theme              String         @default("organic")
+  bgStyle            String         @default("mesh")
+  upiId              String?
+  whatsappNumber     String?
+  hobbies            String[]       @default([])
+  currentlyExploring String?
+  quickLinkIds       String[]       @default([])
+  links              Link[]
+  socialLinks        SocialLink[]
+  cards              DigitalCard[]
+  products           Product[]
+  integrations       Integration[]
+  trafficEvents      TrafficEvent[]
 }
 
 model Link {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
+  wid       Int
+  workspace Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
   title     String
   url       String
   subtitle  String?
   icon      String?
-  active    Boolean  @default(true)
+  active    Boolean   @default(true)
   profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([wid])
 }
 
 model SocialLink {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
+  wid       Int
+  workspace Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
   platform  String
   url       String
   profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([wid])
 }
 
 model DigitalCard {
-  id             String   @id @default(uuid())
+  id             String    @id @default(uuid())
+  wid            Int
+  workspace      Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
   cardName       String
   jobTitle       String
   company        String
@@ -60,29 +87,64 @@ model DigitalCard {
   email          String
   website        String
   theme          String
-  active         Boolean  @default(true)
+  active         Boolean   @default(true)
   qrLink         String?
   profileId      String
-  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile        Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([wid])
 }
 
 model Product {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
+  wid       Int
+  workspace Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
   name      String
   price     String
-  currency  String   @default("USD")
+  currency  String    @default("USD")
   imageUrl  String?
   linkUrl   String?
-  active    Boolean  @default(true)
+  active    Boolean   @default(true)
   profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([wid])
 }
 
 model Integration {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
+  wid       Int
+  workspace Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
   provider  String
-  connected Boolean  @default(false)
+  connected Boolean   @default(false)
   apiKey    String?
   profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([wid])
+}
+
+model TrafficEvent {
+  id          String    @id @default(uuid())
+  wid         Int
+  workspace   Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
+  profileId   String
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  action      String
+  details     String?
+  linkId      String?
+  ipAddress   String?
+  country     String?
+  countryCode String?
+  referrer    String?
+  browser     String?
+  device      String?
+  userAgent   String?
+  sessionId   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([wid])
+  @@index([wid, createdAt])
+  @@index([wid, action])
+  @@index([sessionId])
 }

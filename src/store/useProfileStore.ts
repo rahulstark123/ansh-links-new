@@ -62,6 +62,7 @@ export interface ProfileInfo {
   whatsappNumber?: string;
   hobbies?: string[];
   currentlyExploring?: string;
+  quickLinkIds?: string[];
   cards: DigitalCard[];
   products: ProductItem[];
   integrations: IntegrationItem[];
@@ -104,6 +105,7 @@ const DEFAULT_PROFILE: ProfileInfo = {
   whatsappNumber: '+919876543210',
   hobbies: ['📚 Reading', '💻 Coding', '✈️ Traveling', '🎨 Design'],
   currentlyExploring: 'Next.js 16 & Tailwind v4',
+  quickLinkIds: [],
   trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
   subscriptionStatus: 'trial',
   socialLinks: [

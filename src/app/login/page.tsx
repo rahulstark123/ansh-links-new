@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Eye, EyeOff, Sparkles, Check, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import AuthLoadingOverlay from "@/components/common/AuthLoadingOverlay";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +13,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const isAuthenticating = loading || googleLoading;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +24,7 @@ export default function LoginPage() {
     setErrorMsg("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -33,13 +37,14 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "Invalid email or password.");
-    } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
     setErrorMsg("");
+    setGoogleLoading(true);
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -51,11 +56,18 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "Google Sign-In failed.");
+      setGoogleLoading(false);
     }
   };
 
   return (
     <main className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      {isAuthenticating && (
+        <AuthLoadingOverlay
+          message="Signing you in"
+          submessage="Welcome back to your digital sanctuary"
+        />
+      )}
       
       {/* LEFT SIDE: Premium Branding/Visual Panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-950 text-white relative flex-col justify-between p-16 overflow-hidden border-r border-slate-900 bg-gradient-to-br from-slate-900 via-slate-950 to-black">
@@ -145,7 +157,8 @@ export default function LoginPage() {
             {/* Google OAuth Button */}
             <button
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-205 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-705 dark:text-slate-300 transition-colors cursor-pointer shadow-sm"
+              disabled={isAuthenticating}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-205 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-705 dark:text-slate-300 transition-colors cursor-pointer shadow-sm disabled:opacity-50 disabled:pointer-events-none"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
                 <path
@@ -229,11 +242,11 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isAuthenticating}
               className="w-full py-4 rounded-2xl font-black text-white primary-gradient shadow-lg shadow-indigo-600/10 hover:scale-[0.99] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center text-xs cursor-pointer"
             >
-              {loading ? "Authenticating..." : "Sign In to Dashboard"}
-              {!loading && <ArrowRight className="w-4 h-4 ml-1.5" />}
+              Sign In to Dashboard
+              <ArrowRight className="w-4 h-4 ml-1.5" />
             </button>
           </form>
 

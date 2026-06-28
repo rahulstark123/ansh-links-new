@@ -9,6 +9,7 @@ interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   productToEdit?: ProductItem | null;
+  showToast: (message: string, type: "success" | "error") => void;
 }
 
 const CURRENCIES = [
@@ -19,8 +20,8 @@ const CURRENCIES = [
   { value: "JPY", symbol: "¥", label: "JPY (¥)" },
 ];
 
-export default function ProductModal({ isOpen, onClose, productToEdit }: ProductModalProps) {
-  const { addProduct, updateProduct } = useProfileStore();
+export default function ProductModal({ isOpen, onClose, productToEdit, showToast }: ProductModalProps) {
+  const { profile, addProduct, updateProduct } = useProfileStore();
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -66,8 +67,9 @@ export default function ProductModal({ isOpen, onClose, productToEdit }: Product
     addProductOrUpdate();
   };
 
-  const addProductOrUpdate = () => {
+  const addProductOrUpdate = async () => {
     const productData = {
+      wid: profile.wid,
       name: name.trim(),
       price: price.trim(),
       currency,
@@ -76,12 +78,33 @@ export default function ProductModal({ isOpen, onClose, productToEdit }: Product
       active,
     };
 
-    if (productToEdit) {
-      updateProduct(productToEdit.id, productData);
-    } else {
-      addProduct(productData);
+    try {
+      if (productToEdit) {
+        const res = await fetch(`/api/products/${productToEdit.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        });
+        if (!res.ok) throw new Error("Failed to update product");
+        const updated = await res.json();
+        updateProduct(productToEdit.id, updated);
+        showToast("Product updated successfully!", "success");
+      } else {
+        const res = await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(productData),
+        });
+        if (!res.ok) throw new Error("Failed to create product");
+        const created = await res.json();
+        addProduct(created);
+        showToast("Product published successfully!", "success");
+      }
+      onClose();
+    } catch (err) {
+      console.error(err);
+      showToast("Error saving product: " + (err as Error).message, "error");
     }
-    onClose();
   };
 
   const handleFileUpload = (file: File) => {

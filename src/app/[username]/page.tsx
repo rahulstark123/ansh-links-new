@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useProfileStore, ProfileInfo } from "@/store/useProfileStore";
 import DynamicIcon from "@/components/common/DynamicIcon";
 import { ArrowRight, Sparkles, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
+import { trackAnalyticsEvent, TRAFFIC_ACTIONS } from "@/lib/track-client";
+import QuickLinksRow from "@/components/dashboard/QuickLinksRow";
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -15,6 +17,7 @@ export default function PublicProfilePage() {
   const [mounted, setMounted] = useState(false);
   const [activeProfile, setActiveProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const trackedView = useRef(false);
 
   // Avoid Hydration discrepancy by waiting for mounting
   useEffect(() => {
@@ -42,6 +45,16 @@ export default function PublicProfilePage() {
       setLoading(false);
     }
   }, [params?.username, profile]);
+
+  useEffect(() => {
+    if (!activeProfile?.username || trackedView.current) return;
+    trackedView.current = true;
+    trackAnalyticsEvent({
+      username: activeProfile.username,
+      action: TRAFFIC_ACTIONS.PROFILE_VIEW,
+      details: "Visited public bio page",
+    });
+  }, [activeProfile?.username]);
 
   if (!mounted || loading || !activeProfile) {
     return (
@@ -133,15 +146,34 @@ export default function PublicProfilePage() {
 
   const handleUpiPay = () => {
     if (activeProfile.upiId) {
+      trackAnalyticsEvent({
+        username: activeProfile.username,
+        action: TRAFFIC_ACTIONS.UPI_PAY,
+        details: `Initiated pay trigger to ${activeProfile.upiId}`,
+      });
       window.open(`upi://pay?pa=${activeProfile.upiId}&pn=${encodeURIComponent(activeProfile.name)}`);
     }
   };
 
   const handleWhatsappChat = () => {
     if (activeProfile.whatsappNumber) {
+      trackAnalyticsEvent({
+        username: activeProfile.username,
+        action: TRAFFIC_ACTIONS.WHATSAPP_CHAT,
+        details: "Redirected to WhatsApp chat",
+      });
       const sanitized = activeProfile.whatsappNumber.replace(/[^\d+]/g, "");
       window.open(`https://wa.me/${sanitized}`);
     }
+  };
+
+  const handleLinkClick = (title: string, linkId: string, action: string = TRAFFIC_ACTIONS.LINK_CLICK) => {
+    trackAnalyticsEvent({
+      username: activeProfile.username,
+      action,
+      details: `Clicked '${title}' link`,
+      linkId,
+    });
   };
 
   return (
@@ -174,31 +206,37 @@ export default function PublicProfilePage() {
                 </div>
               )}
             </div>
-
-            {activeProfile.verified && (
-              <div className="absolute bottom-1 right-1 bg-emerald-600 text-white px-2.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-md">
-                <span className="material-symbols-outlined text-[13px] font-fill-1">verified</span>
-                <span className="text-[8px] font-extrabold tracking-wider uppercase">VERIFIED</span>
-              </div>
-            )}
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">
-            {activeProfile.name}
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2 flex items-center justify-center gap-2">
+            <span>{activeProfile.name}</span>
+            {activeProfile.verified && (
+              <span className="material-symbols-outlined text-[20px] text-emerald-500 font-fill-1 shrink-0" title="Verified Account">
+                verified
+              </span>
+            )}
           </h1>
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed font-medium">
             {activeProfile.bio}
           </p>
 
           {activeProfile.currentlyExploring && (
-            <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-50/70 dark:bg-indigo-950/40 text-xs font-black text-indigo-700 dark:text-indigo-400 rounded-full border border-indigo-100/50 dark:border-indigo-900/20 shadow-sm animate-pulse-slow">
+            <div className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-50/70 dark:bg-indigo-950/40 text-xs font-black text-indigo-700 dark:text-indigo-400 rounded-full border border-indigo-100/50 dark:border-indigo-900/20 shadow-sm animate-pulse-slow">
               <span className="material-symbols-outlined text-[14px] font-fill-1">rocket_launch</span>
               <span>Exploring: {activeProfile.currentlyExploring}</span>
             </div>
           )}
 
+          <QuickLinksRow
+            profile={activeProfile}
+            getCardClasses={() =>
+              "bg-white/70 dark:bg-slate-900/60 border border-outline-variant/10 text-slate-700 dark:text-slate-200 hover:shadow-md"
+            }
+            onLinkClick={(title, linkId) => handleLinkClick(title, linkId)}
+          />
+
           {/* Social Links Row */}
-          <div className="flex gap-3 mb-8">
+          <div className="flex gap-3 mb-8 mt-6">
             {activeProfile.socialLinks.map((social) => {
               const preset = PLATFORM_PRESETS.find((p) => p.value === social.platform);
               const iconName = preset ? preset.iconName : "Globe";
@@ -209,6 +247,9 @@ export default function PublicProfilePage() {
                   href={social.url}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() =>
+                    handleLinkClick(social.platform, social.id, TRAFFIC_ACTIONS.SOCIAL_CLICK)
+                  }
                   className="w-11 h-11 flex items-center justify-center rounded-full bg-white/70 dark:bg-slate-900/60 shadow-sm border border-outline-variant/10 text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition-colors"
                 >
                   <DynamicIcon name={iconName} className="w-5 h-5" />
@@ -270,6 +311,7 @@ export default function PublicProfilePage() {
                 href={link.url}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => handleLinkClick(link.title, link.id)}
                 className={`group flex items-center p-5 rounded-xl transition-all ${getCardClasses()}`}
               >
                 <div className="w-12 h-12 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mr-4 shrink-0 shadow-inner">
@@ -307,6 +349,9 @@ export default function PublicProfilePage() {
                   href={product.linkUrl || "#"}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={() =>
+                    handleLinkClick(product.name, product.id, TRAFFIC_ACTIONS.PRODUCT_CLICK)
+                  }
                   className={`group flex items-center p-4 rounded-xl transition-all ${getCardClasses()}`}
                 >
                   {product.imageUrl && (
