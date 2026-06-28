@@ -540,7 +540,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                             <button
                               type="button"
                               onClick={() => updateProfileInfo({ avatar: "" })}
-                              className="px-4 py-2.5 border border-rose-200 dark:border-rose-900/30 text-rose-605 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-955/30 text-xs font-black rounded-xl transition-all cursor-pointer"
+                              className="px-4 py-2.5 border border-rose-200 dark:border-rose-900/30 text-rose-605 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-xs font-black rounded-xl transition-all cursor-pointer"
                             >
                               Remove
                             </button>

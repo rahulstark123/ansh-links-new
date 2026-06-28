@@ -213,7 +213,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="dark bg-slate-955 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-300">
+    <div className="dark bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-300">
       <Header />
       <main className="flex-grow pt-20 overflow-hidden">
         
@@ -319,7 +319,7 @@ export default function Home() {
                   className="w-[310px] shrink-0 bg-slate-900/40 hover:bg-slate-900/80 border border-slate-850 hover:border-indigo-500/40 rounded-[2rem] p-5 transition-all duration-300 shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-1 block group"
                 >
                   {/* Screenshot Container */}
-                  <div className="h-[155px] rounded-[1.5rem] overflow-hidden bg-slate-955 border border-slate-800/60 relative mb-4 flex items-center justify-center">
+                  <div className="h-[155px] rounded-[1.5rem] overflow-hidden bg-slate-905 border border-slate-800/60 relative mb-4 flex items-center justify-center">
                     {app.image ? (
                       <img
                         src={app.image}

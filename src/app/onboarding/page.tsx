@@ -190,7 +190,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-955 flex flex-col justify-between pt-10 pb-20 px-6 transition-colors duration-305">
+    <main className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 flex flex-col justify-between pt-10 pb-20 px-6 transition-colors duration-305">
       {/* Background Gradients */}
       <div className="absolute inset-0 bg-mesh pointer-events-none opacity-40" />
       <div className="absolute top-20 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -229,7 +229,7 @@ export default function OnboardingPage() {
         </div>
 
         {errorMsg && (
-          <div className="p-4 bg-rose-50 dark:bg-rose-955/20 border border-rose-205 dark:border-rose-900/30 text-rose-600 dark:text-rose-455 text-xs font-bold rounded-2xl mb-6">
+          <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-205 dark:border-rose-900/30 text-rose-605 dark:text-rose-455 text-xs font-bold rounded-2xl mb-6">
             {errorMsg}
           </div>
         )}
@@ -437,7 +437,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="premium-input-large bg-slate-50/50 dark:bg-slate-955 border-slate-350 dark:border-slate-805 text-xs font-bold"
+                  className="premium-input-large bg-slate-50/50 dark:bg-slate-950 border-slate-350 dark:border-slate-805 text-xs font-bold"
                   placeholder="e.g. Creator & designer"
                 />
               </div>

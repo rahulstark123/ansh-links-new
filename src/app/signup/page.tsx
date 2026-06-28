@@ -84,7 +84,7 @@ export default function SignupPage() {
     <main className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       
       {/* LEFT SIDE: Premium Branding/Visual Panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-slate-955 text-white relative flex-col justify-between p-16 overflow-hidden border-r border-slate-900 bg-gradient-to-br from-slate-900 via-slate-950 to-black">
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-950 text-white relative flex-col justify-between p-16 overflow-hidden border-r border-slate-900 bg-gradient-to-br from-slate-900 via-slate-950 to-black">
         {/* Animated Mesh Gradients */}
         <div className="absolute inset-0 bg-gradient-to-tr from-indigo-950/40 via-slate-950 to-purple-950/30 pointer-events-none" />
         <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none" />
@@ -199,7 +199,7 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {errorMsg && (
-              <div className="p-4 bg-rose-50 dark:bg-rose-955/20 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-2xl">
+              <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-2xl">
                 {errorMsg}
               </div>
             )}
