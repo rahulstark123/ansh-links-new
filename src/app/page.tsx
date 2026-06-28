@@ -272,13 +272,15 @@ export default function Home() {
                     Get Started Free
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
-                  <Link
-                    href="/ansh"
-                    className="px-8 py-4 rounded-2xl font-bold bg-slate-900/80 backdrop-blur-sm border border-slate-700/60 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  <a
+                    href="https://anshapps.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-8 py-4 rounded-2xl font-bold bg-slate-900/80 backdrop-blur-sm border border-slate-700/60 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 cursor-pointer text-slate-300 hover:text-white"
                   >
                     <Globe className="w-4 h-4 text-indigo-400" />
-                    Live Demo
-                  </Link>
+                    Visit ANSH
+                  </a>
                 </motion.div>
               </div>
 
