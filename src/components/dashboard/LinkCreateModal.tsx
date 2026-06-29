@@ -18,7 +18,7 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
 
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
-  const [url, setUrl] = useState(`https://ansh.links/${profile.username || "username"}/`);
+  const [url, setUrl] = useState("https://");
   const [icon, setIcon] = useState("Link2");
   const [mounted, setMounted] = useState(false);
 
@@ -33,11 +33,8 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
 
   useEffect(() => {
     setMounted(true);
-    if (profile.username) {
-      setUrl(`https://ansh.links/${profile.username}/`);
-    }
     return () => setMounted(false);
-  }, [profile.username]);
+  }, []);
 
   if (!isOpen || !mounted) return null;
 
@@ -47,9 +44,8 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
       return;
     }
 
-    const suffix = url.replace(new RegExp(`^https?:\\/\\/ansh\\.links\\/${profile.username || "username"}\\/`), "").trim();
-    if (!suffix) {
-      showToast("Destination URL path is required!", "error");
+    if (!url.trim() || url.trim() === "https://") {
+      showToast("Destination URL is required!", "error");
       return;
     }
 
@@ -154,18 +150,12 @@ export default function LinkCreateModal({ isOpen, onClose, onCreateSuccess }: Li
               Destination URL
             </label>
             <div className="flex rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-600 transition-all">
-              <span className="flex items-center px-3.5 bg-slate-105 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 text-xs font-extrabold text-slate-500 select-none shrink-0 font-sans">
-                ansh.links/{profile.username || "username"}/
-              </span>
               <input
-                type="text"
-                value={url.replace(new RegExp(`^https?:\\/\\/ansh\\.links\\/${profile.username || "username"}\\/`), "")}
-                onChange={(e) => {
-                  const suffix = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-                  setUrl(`https://ansh.links/${profile.username || "username"}/${suffix}`);
-                }}
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
                 className="flex-grow px-3.5 py-2.5 bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none border-none focus:ring-0"
-                placeholder="e.g. github"
+                placeholder="https://example.com"
                 required
               />
             </div>

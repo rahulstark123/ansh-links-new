@@ -49,6 +49,32 @@ async function createWorkspaceWithProfile(
   });
 }
 
+async function attachClicksToProfile(profile: any) {
+  if (!profile || !profile.links) return profile;
+  const linkIds = profile.links.map((l: any) => l.id);
+  const clickCounts = await prisma.trafficEvent.groupBy({
+    by: ["linkId"],
+    where: {
+      linkId: { in: linkIds },
+      action: "LINK_CLICK",
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  const clickMap = new Map(
+    clickCounts.map((c) => [c.linkId || "", c._count.id])
+  );
+
+  profile.links = profile.links.map((lnk: any) => ({
+    ...lnk,
+    clicks: clickMap.get(lnk.id) || 0,
+  }));
+
+  return profile;
+}
+
 function flattenProfile(profile: any) {
   if (!profile) return profile;
   const { workspace, ...rest } = profile;
@@ -76,6 +102,7 @@ export async function GET(
         cards: true,
         products: true,
         integrations: true,
+        customFields: true,
       },
     });
 
@@ -197,6 +224,7 @@ export async function GET(
             cards: true,
             products: true,
             integrations: true,
+            customFields: true,
           },
         });
       });
@@ -206,7 +234,9 @@ export async function GET(
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    return NextResponse.json(flattenProfile(profile));
+    const flat = flattenProfile(profile);
+    const enriched = await attachClicksToProfile(flat);
+    return NextResponse.json(enriched);
   } catch (error: any) {
     console.error("GET Profile Error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
@@ -242,6 +272,7 @@ export async function POST(
       cards,
       products,
       integrations,
+      customFields,
     } = body;
 
     const result = await prisma.$transaction(async (tx) => {
@@ -327,6 +358,7 @@ export async function POST(
           data: socialLinks.map((s: any) => ({
             platform: s.platform,
             url: s.url,
+            active: s.active !== undefined ? s.active : true,
             profileId: profile.id,
             wid,
           })),
@@ -385,6 +417,20 @@ export async function POST(
         });
       }
 
+      // 8. Synchronize custom fields
+      await tx.customField.deleteMany({ where: { profileId: profile.id } });
+      if (customFields && customFields.length > 0) {
+        await tx.customField.createMany({
+          data: customFields.map((cf: any) => ({
+            key: cf.key,
+            value: cf.value,
+            active: cf.active !== undefined ? cf.active : true,
+            profileId: profile.id,
+            wid,
+          })),
+        });
+      }
+
       const fullProfile = await tx.profile.findUnique({
         where: { id: profile.id },
         include: {
@@ -394,13 +440,15 @@ export async function POST(
           cards: true,
           products: true,
           integrations: true,
+          customFields: true,
         },
       });
 
       return flattenProfile(fullProfile);
     });
 
-    return NextResponse.json(result);
+    const enriched = await attachClicksToProfile(result);
+    return NextResponse.json(enriched);
   } catch (error: any) {
     console.error("POST Profile Error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });

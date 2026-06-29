@@ -14,6 +14,8 @@ import {
   BarChart,
   Bar,
   Cell,
+  PieChart,
+  Pie,
 } from "recharts";
 
 interface OverviewData {
@@ -117,7 +119,7 @@ export default function AnalyticsPanel() {
 
   if (loading) {
     return (
-      <div className="p-8 sm:p-10 max-w-6xl mx-auto animate-pulse space-y-8">
+      <div className="p-8 sm:p-10 w-full animate-pulse space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-32 bg-white dark:bg-slate-900 rounded-3xl border border-outline-variant/10" />
@@ -129,7 +131,7 @@ export default function AnalyticsPanel() {
   }
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-6xl mx-auto animate-fadeIn font-sans">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn font-sans">
       
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -232,32 +234,60 @@ export default function AnalyticsPanel() {
             <p className="text-xs text-slate-400">Discover where your profile traffic originates from.</p>
           </div>
 
-          <div className="w-full h-[180px] flex-grow">
+          <div className="w-full h-[220px] flex flex-col sm:flex-row items-center justify-center gap-8 flex-grow mt-4">
             {referrerData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={referrerData} layout="vertical" margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148, 163, 184, 0.08)" />
-                  <XAxis
-                    type="number"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "#94A3B8", fontSize: 9, fontWeight: 800 }}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "#94A3B8", fontSize: 9, fontWeight: 800 }}
-                  />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(148, 163, 184, 0.04)" }} />
-                  <Bar dataKey="views" radius={[0, 8, 8, 0]}>
-                    {referrerData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                {/* Donut Chart */}
+                <div className="w-full sm:w-1/2 h-full min-h-[160px] relative flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={referrerData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={75}
+                        paddingAngle={3}
+                        dataKey="views"
+                      >
+                        {referrerData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill || "#4F46E5"} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Center Text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+                      Channels
+                    </span>
+                    <span className="text-xl font-black text-slate-800 dark:text-slate-105 mt-1.5 leading-none">
+                      {referrerData.reduce((acc, curr) => acc + curr.views, 0)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Custom Legend */}
+                <div className="w-full sm:w-1/2 flex flex-col gap-2.5 overflow-y-auto max-h-[190px] pr-2">
+                  {referrerData.map((entry, index) => {
+                    const totalViews = referrerData.reduce((acc, curr) => acc + curr.views, 0);
+                    const percentage = totalViews > 0 ? Math.round((entry.views / totalViews) * 100) : 0;
+                    return (
+                      <div key={index} className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-350">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: entry.fill }} />
+                          <span className="truncate text-slate-800 dark:text-slate-205">{entry.name}</span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-slate-800 dark:text-slate-100 font-extrabold">{entry.views} views</span>
+                          <span className="text-slate-450 font-medium text-[10px] bg-slate-50 dark:bg-slate-950 px-2 py-0.5 rounded-lg border border-outline-variant/5">{percentage}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               <div className="h-full flex items-center justify-center text-xs font-bold text-slate-400">
                 Referrer data will appear after profile visits.

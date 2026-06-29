@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useProfileStore, SocialLink } from "@/store/useProfileStore";
+import { useProfileStore, SocialLink, CustomField } from "@/store/useProfileStore";
 import PreviewDevice from "@/components/dashboard/PreviewDevice";
 import DynamicIcon from "@/components/common/DynamicIcon";
 import SocialLinkModal, { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
 import ProductModal from "@/components/dashboard/ProductModal";
+import LinkCreateModal from "@/components/dashboard/LinkCreateModal";
+import { CustomFieldModal } from "@/components/dashboard/CustomFieldsPanel";
 import {
   User,
   Layout,
@@ -66,10 +68,15 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
     profile,
     updateLink,
     updateProfileInfo,
-    updateProduct
+    updateProduct,
+    syncWithCloud,
+    saveStatus
   } = useProfileStore();
 
   const [viewMode, setViewMode] = useState<"mobile" | "tablet" | "desktop">("mobile");
+  
+  // Publish states
+  const [isPublishSuccessOpen, setIsPublishSuccessOpen] = useState(false);
   
   // Hobbies input state
   const [newHobby, setNewHobby] = useState("");
@@ -92,12 +99,26 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productDropdownOpen, setProductDropdownOpen] = useState(false);
   const [socialDropdownOpen, setSocialDropdownOpen] = useState(false);
+  const [customFieldDropdownOpen, setCustomFieldDropdownOpen] = useState(false);
+  const [customFieldModalOpen, setCustomFieldModalOpen] = useState(false);
+  const [editingCustomField, setEditingCustomField] = useState<CustomField | null>(null);
+  const [linkCreateModalOpen, setLinkCreateModalOpen] = useState(false);
   
   // Custom toast state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
+  };
+
+  const handlePublish = async () => {
+    await syncWithCloud();
+    const status = useProfileStore.getState().saveStatus;
+    if (status === 'saved') {
+      setIsPublishSuccessOpen(true);
+    } else {
+      showToast("Failed to save and publish profile. Please check connection.", "error");
+    }
   };
 
   const activeLink = profile.links.find((l) => l.id === linkId);
@@ -158,7 +179,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
   const handleSaveSocial = (socialData: Omit<SocialLink, "id">) => {
     let updated = [...(profile.socialLinks || [])];
     const newId = `social-${Date.now()}`;
-    if (editingSocial) {
+    if (editingSocial && editingSocial.id) {
       updated = updated.map((l) =>
         l.id === editingSocial.id ? { ...l, ...socialData } : l
       );
@@ -194,21 +215,40 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
   };
 
   return (
-    <div className="p-8 sm:p-10 animate-fadeIn max-w-[1400px] mx-auto font-sans">
+    <div className="p-8 sm:p-10 animate-fadeIn w-full font-sans">
       
       {/* Panel header controls */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-2.5 px-5 py-3 rounded-2xl border border-slate-300 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-black transition-all cursor-pointer shadow-sm bg-white dark:bg-slate-900"
+          className="flex items-center justify-center gap-2.5 px-5 py-3 rounded-2xl border border-slate-300 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-black transition-all cursor-pointer shadow-sm bg-white dark:bg-slate-900"
         >
           <ArrowLeft className="w-4.5 h-4.5" />
           Back to Links Manager
         </button>
 
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">
-          Workspace Sandbox: <span className="font-extrabold text-indigo-750 dark:text-indigo-400">@{profile.username}</span>
-        </span>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden lg:inline">
+            Workspace Sandbox: <span className="font-extrabold text-indigo-750 dark:text-indigo-400">@{profile.username}</span>
+          </span>
+          <button
+            onClick={handlePublish}
+            disabled={saveStatus === "saving"}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-white primary-gradient text-xs font-black shadow-lg shadow-indigo-600/10 hover:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+          >
+            {saveStatus === "saving" ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-sm font-fill-1">send</span>
+                Save & Publish Live
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
@@ -295,7 +335,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                           Profile Avatar Picture
                         </label>
                         <div className="flex flex-col sm:flex-row items-center gap-4 p-4.5 bg-slate-50 dark:bg-slate-955/20 border border-slate-200 dark:border-slate-800 rounded-2xl">
-                          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-md shrink-0 bg-slate-105 dark:bg-slate-900 flex items-center justify-center">
+                          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-md shrink-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
                             {profile.avatar ? (
                               <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -488,16 +528,15 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                   className="overflow-hidden"
                 >
                   <div className="p-6 space-y-4">
-                    
                     {/* List social connections */}
                     <div className="space-y-2">
-                      {profile.socialLinks.map((sLink) => {
+                      {(profile.socialLinks || []).filter(s => s.active !== false).map((sLink) => {
                         const preset = PLATFORM_PRESETS.find((p) => p.value === sLink.platform);
                         const SocialIcon = getPresetIcon(preset ? preset.iconName : "Globe");
                         return (
                           <div
                             key={sLink.id}
-                            className="flex items-center justify-between p-3.5 bg-slate-55 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-inner"
+                            className="flex items-center justify-between p-3.5 bg-slate-55 dark:bg-slate-950 border border-slate-205 dark:border-slate-805 rounded-2xl shadow-inner"
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <div className={`w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-850 flex items-center justify-center shrink-0 ${preset ? preset.color.split(" ")[0] : ""}`}>
@@ -529,9 +568,9 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                         );
                       })}
 
-                      {profile.socialLinks.length === 0 && (
-                        <div className="text-center py-8 text-slate-400 text-xs font-bold border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/30">
-                          No social links connected yet.
+                      {(profile.socialLinks || []).filter(s => s.active !== false).length === 0 && (
+                        <div className="text-center py-8 text-slate-455 font-bold text-xs border border-dashed border-slate-202/50 dark:border-slate-802 rounded-2xl bg-slate-50/30">
+                          No active social links on profile. Select from the dropdown below to feature one.
                         </div>
                       )}
                     </div>
@@ -542,7 +581,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                       <button
                         type="button"
                         onClick={() => setSocialDropdownOpen(!socialDropdownOpen)}
-                        className="w-full flex items-center justify-between px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-sans"
+                        className="w-full flex items-center justify-between px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-xs font-black text-slate-700 dark:text-slate-355 cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-sans"
                       >
                         <span className="flex items-center gap-2">
                           <Plus className="w-4 h-4 text-indigo-500" />
@@ -555,20 +594,26 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setSocialDropdownOpen(false)} />
                           <div className="absolute left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-2xl shadow-xl z-[100] p-2 space-y-1 animate-fadeIn">
-                            {PLATFORM_PRESETS.filter(p => !profile.socialLinks.some(s => s.platform === p.value)).map((p) => (
-                              <button
-                                key={p.value}
-                                type="button"
-                                onClick={() => {
-                                  setEditingSocial({ id: "", platform: p.value, url: "" });
-                                  setSocialModalOpen(true);
-                                  setSocialDropdownOpen(false);
-                                }}
-                                className="w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 text-left transition-colors cursor-pointer"
-                              >
-                                <span>{p.label}</span>
-                              </button>
-                            ))}
+                            {(profile.socialLinks || []).filter(s => !s.active).map((sLink) => {
+                              const preset = PLATFORM_PRESETS.find((p) => p.value === sLink.platform);
+                              return (
+                                <button
+                                  key={sLink.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = profile.socialLinks.map((s) =>
+                                      s.id === sLink.id ? { ...s, active: true } : s
+                                    );
+                                    updateProfileInfo({ socialLinks: updated });
+                                    setSocialDropdownOpen(false);
+                                    showToast("Social connection featured on profile!", "success");
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-305 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 text-left transition-colors cursor-pointer"
+                                >
+                                  <span>{preset ? preset.label : sLink.platform} ({sLink.url})</span>
+                                </button>
+                              );
+                            })}
                             
                             <button
                               type="button"
@@ -579,7 +624,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                               }}
                               className="w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-left transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-800/80 mt-1 pt-2"
                             >
-                              ➕ Create Custom Connection...
+                              ➕ Create & Feature New Social Profile...
                             </button>
                           </div>
                         </>
@@ -608,8 +653,8 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                   <Link2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-sm text-slate-900 dark:text-slate-100 font-sans">Custom Page Links</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5 font-bold">Manage, edit, and toggle multiple custom links</p>
+                  <h3 className="font-black text-sm text-slate-900 dark:text-slate-100 font-sans">Custom Fields</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 font-bold">Manage, edit, and feature multiple custom fields</p>
                 </div>
               </div>
               {activeSection === "customLinks" ? <ChevronUp className="w-4.5 h-4.5 text-slate-400" /> : <ChevronDown className="w-4.5 h-4.5 text-slate-400" />}
@@ -625,216 +670,110 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                   className="overflow-hidden"
                 >
                   <div className="p-6 space-y-4">
-                    
-                    {/* List all links inline with collapsible details */}
+                    {/* List all custom fields featured on the profile */}
                     <div className="space-y-3">
-                      {profile.links.map((lnk) => {
-                        const isEditingThis = editingLinkId === lnk.id;
-                        return (
-                          <div
-                            key={lnk.id}
-                            className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-slate-50/50 dark:bg-slate-955/20"
-                          >
-                            {/* Header Row */}
-                            <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-905 border-b border-slate-100 dark:border-slate-850">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-8 h-8 rounded-lg bg-slate-55 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
-                                  <DynamicIcon name={lnk.icon || "Link2"} className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                  <span className="text-xs font-black block truncate text-slate-850 dark:text-slate-202">{lnk.title}</span>
-                                  <span className="text-[9px] text-slate-400 truncate block mt-0.5 max-w-[180px] sm:max-w-[260px]">{lnk.url}</span>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingLinkId(isEditingThis ? null : lnk.id)}
-                                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-650 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer ${isEditingThis ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950" : ""}`}
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = profile.links.map((l) =>
-                                      l.id === lnk.id ? { ...l, active: !l.active } : l
-                                    );
-                                    updateProfileInfo({ links: updated });
-                                  }}
-                                  className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                                    lnk.active
-                                      ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-650"
-                                      : "bg-slate-100 dark:bg-slate-800 text-slate-400"
-                                  }`}
-                                >
-                                  {lnk.active ? "Active" : "Hidden"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = profile.links.filter((l) => l.id !== lnk.id);
-                                    updateProfileInfo({ links: updated });
-                                  }}
-                                  className="w-7 h-7 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
+                      {(profile.customFields || []).filter((cf) => cf.active !== false).map((field) => (
+                        <div
+                          key={field.id}
+                          className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-805 rounded-2xl shadow-inner animate-fadeIn"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-850 flex items-center justify-center shrink-0 text-slate-500">
+                              <Link2 className="w-4 h-4" />
                             </div>
-
-                            {/* Inline Fields Editor */}
-                            {isEditingThis && (
-                              <div className="p-4 space-y-4 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-100 dark:border-slate-850">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                  <div>
-                                    <label className="text-[10px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase block mb-1">
-                                      Link Title
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={lnk.title}
-                                      onChange={(e) => {
-                                        const updated = profile.links.map((l) =>
-                                          l.id === lnk.id ? { ...l, title: e.target.value } : l
-                                        );
-                                        updateProfileInfo({ links: updated });
-                                      }}
-                                      className="premium-input-large text-slate-800 dark:text-slate-100 border-slate-350 dark:border-slate-805 bg-white dark:bg-slate-900 text-xs font-bold"
-                                      placeholder="e.g. Portfolio"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-[10px] font-black tracking-wider text-slate-505 dark:text-slate-400 uppercase block mb-1">
-                                      Subtitle / Description
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={lnk.subtitle || ""}
-                                      onChange={(e) => {
-                                        const updated = profile.links.map((l) =>
-                                          l.id === lnk.id ? { ...l, subtitle: e.target.value } : l
-                                        );
-                                        updateProfileInfo({ links: updated });
-                                      }}
-                                      className="premium-input-large text-slate-800 dark:text-slate-100 border-slate-350 dark:border-slate-805 bg-white dark:bg-slate-900 text-xs font-bold"
-                                      placeholder="e.g. Check my designs"
-                                    />
-                                  </div>
-                                  <div className="sm:col-span-2">
-                                    <label className="text-[10px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase block mb-1">
-                                      Redirect Destination URL
-                                    </label>
-                                    <div className="flex rounded-2xl border border-slate-350 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-600 transition-all">
-                                      <span className="flex items-center px-4 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 text-xs font-extrabold text-slate-555 select-none shrink-0 font-sans">
-                                        ansh.links/{profile.username || "username"}/
-                                      </span>
-                                      <input
-                                        type="text"
-                                        value={lnk.url.replace(new RegExp(`^https?:\\/\\/ansh\\.links\\/${profile.username || "username"}\\/`), "")}
-                                        onChange={(e) => {
-                                          const suffix = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-                                          const updated = profile.links.map((l) =>
-                                            l.id === lnk.id
-                                              ? { ...l, url: `https://ansh.links/${profile.username || "username"}/${suffix}` }
-                                              : l
-                                          );
-                                          updateProfileInfo({ links: updated });
-                                        }}
-                                        className="flex-grow px-4 py-3 bg-transparent text-xs font-bold text-slate-808 dark:text-slate-100 outline-none border-none focus:ring-0"
-                                        placeholder="e.g. github"
-                                      />
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="sm:col-span-2">
-                                    <label className="text-[10px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase block mb-2">
-                                      Symbol Icon
-                                    </label>
-                                    <div className="flex flex-wrap gap-1.5 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                                      {PRESET_ICONS.map((ico) => (
-                                        <button
-                                          key={ico}
-                                          type="button"
-                                          onClick={() => {
-                                            const updated = profile.links.map((l) =>
-                                              l.id === lnk.id ? { ...l, icon: ico } : l
-                                            );
-                                            updateProfileInfo({ links: updated });
-                                          }}
-                                          className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                                            lnk.icon === ico
-                                              ? "bg-indigo-600 text-white shadow-sm"
-                                              : "bg-slate-55 dark:bg-slate-900 border border-slate-202/50 dark:border-slate-800 text-slate-500 hover:bg-slate-100"
-                                          }`}
-                                          title={ico}
-                                        >
-                                          <DynamicIcon name={ico} className="w-4 h-4" />
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            <div className="min-w-0">
+                              <span className="text-xs font-black block leading-none capitalize">{field.key}</span>
+                              <span className="text-[10px] text-slate-400 truncate block mt-1.5 max-w-[180px] sm:max-w-[260px]">{field.value}</span>
+                            </div>
                           </div>
-                        );
-                      })}
 
-                      {profile.links.length === 0 && (
-                        <div className="text-center py-8 text-slate-400 text-xs font-bold border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/30">
-                          No custom page links created yet.
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCustomField(field);
+                                setCustomFieldModalOpen(true);
+                              }}
+                              className="w-7 h-7 rounded-lg hover:bg-slate-55 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-650 transition-colors cursor-pointer"
+                              title="Modify Field"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = (profile.customFields || []).map((cf) =>
+                                  cf.id === field.id ? { ...cf, active: false } : cf
+                                );
+                                updateProfileInfo({ customFields: updated });
+                                showToast("Custom field hidden from profile page.", "success");
+                              }}
+                              className="w-7 h-7 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-955/20 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              title="Hide from profile page"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+
+                      {(profile.customFields || []).filter((cf) => cf.active !== false).length === 0 && (
+                        <div className="text-center py-8 text-slate-455 font-bold text-xs border border-dashed border-slate-202/50 dark:border-slate-802 rounded-2xl bg-slate-50/30">
+                          No active custom fields on profile. Select from the dropdown below to feature one.
                         </div>
                       )}
                     </div>
 
-                    {/* Inline Custom Link Creator */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded-2xl space-y-3 shadow-inner">
-                      <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block font-sans">
-                        Create New Custom Page Link
-                      </span>
-                      <div className="space-y-2">
-                        <input
-                          id="customLinkTitleInput"
-                          type="text"
-                          placeholder="Link Name / Title"
-                          className="premium-input-large text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold"
-                        />
-                        <input
-                          id="customLinkUrlInput"
-                          type="url"
-                          placeholder="Destination URL (e.g. https://...)"
-                          className="premium-input-large text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-sans"
-                        />
-                      </div>
+                    {/* Custom Field selector dropdown trigger */}
+                    <div className="relative">
                       <button
                         type="button"
-                        onClick={() => {
-                          const titleInput = document.getElementById("customLinkTitleInput") as HTMLInputElement;
-                          const urlInput = document.getElementById("customLinkUrlInput") as HTMLInputElement;
-                          const titleVal = titleInput.value.trim();
-                          const urlVal = urlInput.value.trim();
-                          if (titleVal && urlVal) {
-                            const updated = [...profile.links];
-                            updated.push({
-                              id: `link-${Date.now()}`,
-                              title: titleVal,
-                              subtitle: "",
-                              url: urlVal,
-                              icon: "Link2",
-                              active: true
-                            });
-                            updateProfileInfo({ links: updated });
-                            titleInput.value = "";
-                            urlInput.value = "";
-                          }
-                        }}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-white primary-gradient rounded-xl text-xs font-black shadow-lg shadow-indigo-600/10 hover:scale-[0.98] transition-transform cursor-pointer"
+                        onClick={() => setCustomFieldDropdownOpen(!customFieldDropdownOpen)}
+                        className="w-full flex items-center justify-between px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 text-xs font-black text-slate-700 dark:text-slate-355 cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-sans"
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        Save Custom Link
+                        <span className="flex items-center gap-2">
+                          <Plus className="w-4 h-4 text-indigo-500" />
+                          Add Custom Field...
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${customFieldDropdownOpen ? "rotate-180" : ""}`} />
                       </button>
+
+                      {customFieldDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setCustomFieldDropdownOpen(false)} />
+                          <div className="absolute left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-2xl shadow-xl z-[100] p-2 space-y-1 animate-fadeIn">
+                            {(profile.customFields || []).filter((cf) => !cf.active).map((field) => (
+                              <button
+                                key={field.id}
+                                type="button"
+                                onClick={() => {
+                                  const updated = profile.customFields.map((cf) =>
+                                    cf.id === field.id ? { ...cf, active: true } : cf
+                                  );
+                                  updateProfileInfo({ customFields: updated });
+                                  setCustomFieldDropdownOpen(false);
+                                  showToast("Custom field featured on profile!", "success");
+                                }}
+                                className="w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-305 hover:bg-indigo-55 dark:hover:bg-indigo-955/40 hover:text-indigo-600 dark:hover:text-indigo-400 text-left transition-colors cursor-pointer"
+                              >
+                                <span>{field.key}: {field.value}</span>
+                              </button>
+                            ))}
+                            
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomFieldDropdownOpen(false);
+                                setEditingCustomField(null);
+                                setCustomFieldModalOpen(true);
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-left transition-colors cursor-pointer border-t border-slate-100 dark:border-slate-802/80 mt-1 pt-2"
+                            >
+                              ➕ Create & Feature New Custom Field...
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -1138,11 +1077,111 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
         showToast={showToast}
       />
 
+      {/* Embedded Custom Link Creator Modal */}
+      <LinkCreateModal
+        isOpen={linkCreateModalOpen}
+        onClose={() => setLinkCreateModalOpen(false)}
+        onCreateSuccess={(newLinkId) => {
+          setLinkCreateModalOpen(false);
+          showToast("Custom link created and added to profile!", "success");
+        }}
+      />
+      {/* Embedded Custom Field Creator Modal */}
+      <CustomFieldModal
+        isOpen={customFieldModalOpen}
+        onClose={() => {
+          setCustomFieldModalOpen(false);
+          setEditingCustomField(null);
+        }}
+        onSave={(fieldData) => {
+          let updated = [...(profile.customFields || [])];
+          if (editingCustomField) {
+            // Edit existing
+            updated = updated.map((cf) =>
+              cf.id === editingCustomField.id ? { ...cf, ...fieldData } : cf
+            );
+            showToast("Custom field updated successfully!", "success");
+          } else {
+            // Create new
+            updated.push({
+              id: `field-${Date.now()}`,
+              ...fieldData,
+            });
+            showToast("Custom field created and featured on profile!", "success");
+          }
+          updateProfileInfo({ customFields: updated });
+        }}
+        fieldToEdit={editingCustomField}
+      />
+
       {/* Custom Toast Notification Overlay */}
       {toast && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[1050] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border bg-white dark:bg-slate-900 border-outline-variant/10 font-bold text-xs select-none animate-fadeIn">
           <div className={`w-2.5 h-2.5 rounded-full ${toast.type === "success" ? "bg-emerald-500 shadow-sm" : "bg-rose-500 shadow-sm"}`} />
           <span className="text-slate-800 dark:text-slate-200">{toast.message}</span>
+        </div>
+      )}
+
+      {/* Publish Success Modal */}
+      {isPublishSuccessOpen && (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-fadeIn font-sans">
+          <div className="bg-white dark:bg-slate-900 border border-outline-variant/10 w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 text-center space-y-6 animate-fadeIn">
+            
+            {/* Celebration Icon */}
+            <div className="w-20 h-20 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+              <span className="material-symbols-outlined text-4xl animate-bounce">celebration</span>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">Profile Published Live!</h3>
+              <p className="text-xs text-slate-450 font-medium">
+                Your custom links, design layouts, and details have been successfully synchronized.
+              </p>
+            </div>
+
+            {/* Public Link Display & Action */}
+            <div className="bg-slate-50 dark:bg-slate-950 p-4.5 border border-outline-variant/10 rounded-2xl space-y-3">
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block text-left">
+                Your Shareable Public Link
+              </span>
+              <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2 pl-4 border border-slate-200 dark:border-slate-800 rounded-xl">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-350 truncate text-left select-all">
+                  {typeof window !== "undefined" ? `${window.location.origin}/${profile.username}` : `/${profile.username}`}
+                </span>
+                <button
+                  onClick={() => {
+                    const url = typeof window !== "undefined" ? `${window.location.origin}/${profile.username}` : `/${profile.username}`;
+                    navigator.clipboard.writeText(url);
+                    showToast("Link copied to clipboard!", "success");
+                  }}
+                  className="px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100/50 text-indigo-700 dark:text-indigo-400 text-xs font-black rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                >
+                  <span className="material-symbols-outlined text-sm">content_copy</span>
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                onClick={() => setIsPublishSuccessOpen(false)}
+                className="w-full py-3.5 rounded-2xl border border-outline-variant/10 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-black transition-all cursor-pointer"
+              >
+                Keep Editing
+              </button>
+              <a
+                href={`/${profile.username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 rounded-2xl text-white primary-gradient text-xs font-black shadow-lg shadow-indigo-600/10 hover:scale-[0.98] transition-transform flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-sm font-fill-1">open_in_new</span>
+                View Live Page
+              </a>
+            </div>
+
+          </div>
         </div>
       )}
     </div>

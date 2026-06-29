@@ -95,7 +95,7 @@ export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProp
         {/* Profile Details */}
         <div className="flex flex-col items-center text-center mt-4 mb-8 w-full">
           <div className="relative mb-4">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-md">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white dark:border-slate-800 shadow-md bg-slate-100 dark:bg-slate-900">
               {profile.avatar ? (
                 <img
                   src={profile.avatar}
@@ -139,7 +139,7 @@ export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProp
 
           {/* Social Icons row */}
           <div className="flex justify-center gap-3 mt-4 flex-wrap max-w-[280px]">
-            {profile.socialLinks.map((social) => {
+            {(profile.socialLinks || []).filter(s => s.active !== false).map((social) => {
               const preset = PLATFORM_PRESETS.find((p) => p.value === social.platform);
               const iconName = preset ? preset.iconName : "Globe";
 
@@ -188,6 +188,21 @@ export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProp
               >
                 {hobby}
               </span>
+            ))}
+          </div>
+        )}
+
+        {/* Custom Fields list tags */}
+        {profile.customFields && profile.customFields.filter(cf => cf.active !== false).length > 0 && (
+          <div className="w-full max-w-[310px] mb-5 flex flex-wrap justify-center gap-1.5 px-2">
+            {profile.customFields.filter(cf => cf.active !== false).map((field) => (
+              <div
+                key={field.id}
+                className="px-2.5 py-1 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/20 rounded-xl text-[9px] font-bold text-indigo-900 dark:text-indigo-200 shadow-sm flex items-center gap-1"
+              >
+                <span className="opacity-70">{field.key}:</span>
+                <span className="font-extrabold">{field.value}</span>
+              </div>
             ))}
           </div>
         )}

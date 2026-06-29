@@ -9,6 +9,7 @@ import Link from "next/link";
 import { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
 import { trackAnalyticsEvent, TRAFFIC_ACTIONS } from "@/lib/track-client";
 import QuickLinksRow from "@/components/dashboard/QuickLinksRow";
+import { supabase } from "@/lib/supabase";
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -18,6 +19,24 @@ export default function PublicProfilePage() {
   const [activeProfile, setActiveProfile] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const trackedView = useRef(false);
+  const [isOwner, setIsOwner] = useState(false);
+
+  // Check if current authenticated user owns this profile page
+  useEffect(() => {
+    const checkOwner = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user && profile && activeProfile) {
+          if (profile.username === activeProfile.username) {
+            setIsOwner(true);
+          }
+        }
+      } catch (err) {
+        console.error("Owner check error:", err);
+      }
+    };
+    checkOwner();
+  }, [profile, activeProfile]);
 
   // Avoid Hydration discrepancy by waiting for mounting
   useEffect(() => {
@@ -178,26 +197,19 @@ export default function PublicProfilePage() {
 
   return (
     <div className={`${getThemeClasses()} ${getBgTextureClass()} relative`}>
-      {/* Floating admin link for ease of navigation back to dashboard */}
-      <div className="absolute top-6 left-6 z-40">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-full shadow-sm hover:shadow-md border border-outline-variant/10 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition-all"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Edit Bio
-        </Link>
-      </div>
 
-      <main className="pt-24 pb-20 px-6 max-w-2xl mx-auto flex flex-col items-center">
+
+      <main className="pt-16 pb-20 px-4 sm:px-6 max-w-2xl mx-auto flex flex-col items-center">
+        {/* Centered Premium Glassmorphic Container / Boundary */}
+        <div className="w-full bg-white/30 dark:bg-slate-950/20 backdrop-blur-xl rounded-[2.5rem] border border-white/20 dark:border-slate-800/10 shadow-2xl p-6 sm:p-12 mt-8 flex flex-col items-center gap-2">
         {/* Profile Identity Section */}
         <section className="flex flex-col items-center text-center mb-10 w-full animate-fadeIn">
           <div className="relative mb-6">
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl ring-1 ring-outline-variant/5">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl ring-1 ring-outline-variant/5 bg-slate-100 dark:bg-slate-900">
               {activeProfile.avatar ? (
                 <img
                   alt={activeProfile.name}
-                  className="w-full h-full object-cover animate-shimmer"
+                  className="w-full h-full object-cover"
                   src={activeProfile.avatar}
                 />
               ) : (
@@ -237,7 +249,7 @@ export default function PublicProfilePage() {
 
           {/* Social Links Row */}
           <div className="flex gap-3 mb-8 mt-6">
-            {activeProfile.socialLinks.map((social) => {
+            {(activeProfile.socialLinks || []).filter(s => s.active !== false).map((social) => {
               const preset = PLATFORM_PRESETS.find((p) => p.value === social.platform);
               const iconName = preset ? preset.iconName : "Globe";
 
@@ -293,6 +305,21 @@ export default function PublicProfilePage() {
               >
                 {hobby}
               </span>
+            ))}
+          </section>
+        )}
+
+        {/* Custom Fields list tags */}
+        {activeProfile.customFields && activeProfile.customFields.filter(cf => cf.active !== false).length > 0 && (
+          <section className="flex flex-wrap justify-center gap-2 max-w-md mb-8 px-4">
+            {activeProfile.customFields.filter(cf => cf.active !== false).map((field) => (
+              <div
+                key={field.id}
+                className="px-3.5 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/20 rounded-xl text-xs font-bold text-indigo-900 dark:text-indigo-200 shadow-sm flex items-center gap-1.5"
+              >
+                <span className="opacity-70">{field.key}:</span>
+                <span className="font-extrabold">{field.value}</span>
+              </div>
             ))}
           </section>
         )}
@@ -382,7 +409,8 @@ export default function PublicProfilePage() {
             This profile is cryptographically signed and verified by the ANSH TREE network for secure communication.
           </p>
         </div>
-      </main>
+      </div>
+    </main>
 
       {/* Styled simple footer */}
       <footer className="py-10 text-center text-xs text-slate-400">

@@ -90,7 +90,7 @@ export default function AllCardsPanel({ setActivePanel }: { setActivePanel: (pan
   };
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-6xl mx-auto animate-fadeIn">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn">
       
       {/* Overview Block */}
       <div className="bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-8 shadow-sm space-y-2 transition-colors duration-300">

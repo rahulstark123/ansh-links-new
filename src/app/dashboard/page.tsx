@@ -14,9 +14,12 @@ import QuickLinksPanel from "@/components/dashboard/QuickLinksPanel";
 import IntegrationsPanel from "@/components/dashboard/IntegrationsPanel";
 import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import TrafficLogsPanel from "@/components/dashboard/TrafficLogsPanel";
+import RedirectsPanel from "@/components/dashboard/RedirectsPanel";
+import CustomFieldsPanel from "@/components/dashboard/CustomFieldsPanel";
 
 export default function DashboardPage() {
   const [activePanel, setActivePanel] = useState<PanelType>("links");
+  const [canvasOrigin, setCanvasOrigin] = useState<"links" | "workspace-links">("links");
   const [activeLinkId, setActiveLinkId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -27,14 +30,7 @@ export default function DashboardPage() {
       case "traffic":
         return <TrafficLogsPanel />;
       case "redirects":
-        return (
-          <div className="p-8 sm:p-10 font-sans max-w-4xl mx-auto space-y-4 animate-fadeIn">
-            <h3 className="font-black text-lg text-indigo-700 dark:text-indigo-400">Redirect Rules</h3>
-            <div className="p-8 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl text-center text-slate-400">
-              Manage custom link redirects, link grouping parameters, and geo-routing rules.
-            </div>
-          </div>
-        );
+        return <RedirectsPanel />;
       case "my-cards":
         return <MyCardsPanel />;
       case "all-cards":
@@ -60,17 +56,20 @@ export default function DashboardPage() {
           <CanvasPanel
             linkId={activeLinkId || ""}
             onBack={() => {
-              setActivePanel("links");
+              setActivePanel(canvasOrigin);
               setActiveLinkId(null);
             }}
           />
         );
+      case "workspace-links":
+        return <CustomFieldsPanel />;
       case "links":
       default:
         return (
           <MyLinksPanel
             searchQuery={searchQuery}
             onEnterCanvasMode={(id) => {
+              setCanvasOrigin(activePanel as "links" | "workspace-links");
               setActivePanel("canvas-edit");
               setActiveLinkId(id);
             }}

@@ -47,7 +47,7 @@ export default function CustomPagesPanel() {
   };
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-5xl mx-auto animate-fadeIn font-sans">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn font-sans">
       
       {/* Header action panel */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-8 shadow-sm transition-colors duration-300">

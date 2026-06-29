@@ -68,6 +68,9 @@ export default function SocialProfilePanel() {
       const updated = socialLinks.filter((l) => l.id !== deletingLink.id);
       updateProfileInfo({ socialLinks: updated });
       setDeletingLink(null);
+      setTimeout(() => {
+        useProfileStore.getState().syncWithCloud();
+      }, 100);
     }
   };
 
@@ -88,10 +91,13 @@ export default function SocialProfilePanel() {
     }
 
     updateProfileInfo({ socialLinks: updated });
+    setTimeout(() => {
+      useProfileStore.getState().syncWithCloud();
+    }, 100);
   };
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-5xl mx-auto animate-fadeIn font-sans">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn font-sans">
       
       {/* Header Block */}
       <div className="bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-8 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 transition-colors duration-300">

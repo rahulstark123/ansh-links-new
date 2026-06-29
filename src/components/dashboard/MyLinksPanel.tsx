@@ -19,6 +19,8 @@ import {
   ExternalLink,
   CheckCircle,
   XCircle,
+  MoreVertical,
+  Copy,
 } from "lucide-react";
 
 interface MyLinksPanelProps {
@@ -31,6 +33,9 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
 
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  // Context dropdown menu selection state
+  const [openMenuLinkId, setOpenMenuLinkId] = useState<string | null>(null);
 
   // Custom delete confirmation states
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -103,7 +108,7 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
   };
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-6xl mx-auto animate-fadeIn">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn">
       
       {/* Panel Top Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-8 shadow-sm">
@@ -177,7 +182,7 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                 </div>
                 
                 {/* Quick actions & Toggle */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 relative">
                   <button
                     onClick={() => handleToggleActive(link)}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
@@ -188,20 +193,64 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                   >
                     {link.active ? "Active" : "Disabled"}
                   </button>
-                  <button
-                    onClick={() => handleOpenEdit(link)}
-                    className="w-8 h-8 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors"
-                    title="Edit Link"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleOpenDelete(link)}
-                    className="w-8 h-8 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors"
-                    title="Delete Link"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuLinkId(openMenuLinkId === link.id ? null : link.id);
+                      }}
+                      className="w-8 h-8 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-650 transition-all cursor-pointer"
+                      title="More Options"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+
+                    {openMenuLinkId === link.id && (
+                      <>
+                        <div className="fixed inset-0 z-30" onClick={() => setOpenMenuLinkId(null)} />
+                        <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-xl shadow-lg z-40 p-1.5 space-y-1 animate-fadeIn">
+                          <button
+                            onClick={() => {
+                              handleOpenEdit(link);
+                              setOpenMenuLinkId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-left"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            Edit Link
+                          </button>
+
+                          {profile.username && (
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(link.url);
+                                alert("Link copied to clipboard!");
+                                setOpenMenuLinkId(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-55 dark:hover:bg-slate-800 rounded-lg text-left"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              Copy Link
+                            </button>
+                          )}
+
+                          <div className="h-px bg-outline-variant/5 my-1" />
+
+                          <button
+                            onClick={() => {
+                              handleOpenDelete(link);
+                              setOpenMenuLinkId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-955/20 rounded-lg text-left"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Link
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -213,22 +262,29 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                 <span className="text-xs text-slate-400 block line-clamp-2 min-h-[2rem]">
                   {link.subtitle || "No description provided."}
                 </span>
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 mt-2.5 truncate max-w-full"
-                >
-                  <span className="truncate">{link.url}</span>
-                  <ExternalLink className="w-3 h-3 shrink-0" />
-                </a>
+                {link.url.startsWith("https://ansh.links/") ? (
+                  <span className="text-xs text-rose-500 font-extrabold flex items-center gap-1.5 mt-2.5">
+                    <span className="material-symbols-outlined text-[14px]">warning</span>
+                    Old path format. Edit to fix destination URL.
+                  </span>
+                ) : (
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 mt-2.5 truncate max-w-full"
+                  >
+                    <span className="truncate">{link.url}</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                )}
               </div>
 
               {/* Card Bottom */}
               <div className="pt-4 border-t border-outline-variant/5 flex justify-between items-center text-xs">
                 <div className="flex items-center gap-1 text-slate-450 font-bold">
                   <Eye className="w-4 h-4" />
-                  <span>{link.title.length * 3 + 12} clicks</span>
+                  <span>{(link as any).clicks || 0} clicks</span>
                 </div>
               </div>
             </div>
@@ -315,27 +371,68 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                     </td>
 
                     {/* Clicks */}
-                    <td className="py-4 px-6 text-center text-slate-400">
-                      {link.title.length * 3 + 12}
+                    <td className="py-4 px-6 text-center text-slate-450 dark:text-slate-400">
+                      {(link as any).clicks || 0}
                     </td>
 
                     {/* Actions */}
-                    <td className="py-4 px-6 text-right">
-                      <div className="inline-flex gap-2">
+                    <td className="py-4 px-6 text-right relative">
+                      <div className="inline-flex gap-2 justify-end relative">
                         <button
-                          onClick={() => handleOpenEdit(link)}
-                          className="w-8 h-8 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors"
-                          title="Edit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuLinkId(openMenuLinkId === link.id ? null : link.id);
+                          }}
+                          className="w-8 h-8 rounded-lg hover:bg-slate-55 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
+                          title="Options"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <MoreVertical className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleOpenDelete(link)}
-                          className="w-8 h-8 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+                        {openMenuLinkId === link.id && (
+                          <>
+                            <div className="fixed inset-0 z-30" onClick={() => setOpenMenuLinkId(null)} />
+                            <div className="absolute right-0 mt-8 w-40 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-xl shadow-lg z-40 p-1.5 space-y-1 text-left">
+                              <button
+                                onClick={() => {
+                                  handleOpenEdit(link);
+                                  setOpenMenuLinkId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-55 dark:hover:bg-slate-800 rounded-lg text-left"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit Link
+                              </button>
+
+                              {profile.username && (
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(link.url);
+                                    alert("Link copied to clipboard!");
+                                    setOpenMenuLinkId(null);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-left"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                  Copy Link
+                                </button>
+                              )}
+
+                              <div className="h-px bg-outline-variant/5 my-1" />
+
+                              <button
+                                onClick={() => {
+                                  handleOpenDelete(link);
+                                  setOpenMenuLinkId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-955/20 rounded-lg text-left"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete Link
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

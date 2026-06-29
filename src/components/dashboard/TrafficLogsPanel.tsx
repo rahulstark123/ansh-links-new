@@ -100,7 +100,7 @@ export default function TrafficLogsPanel() {
   const filteredLogs = data?.logs || [];
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-6xl mx-auto animate-fadeIn font-sans">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn font-sans">
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         

@@ -99,7 +99,7 @@ export default function HobbiesBioPanel() {
   };
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-3xl mx-auto animate-fadeIn font-sans">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn font-sans">
       
       {/* Header Block */}
       <div className="bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-8 shadow-sm transition-colors duration-300">

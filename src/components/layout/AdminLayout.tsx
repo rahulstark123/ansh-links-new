@@ -41,6 +41,7 @@ export type PanelType =
   | "dashboard"
   | "traffic"
   | "links"
+  | "workspace-links"
   | "redirects"
   | "my-cards"
   | "all-cards"
@@ -147,7 +148,7 @@ export default function AdminLayout({
     if (panel === "dashboard" || panel === "traffic") return "dashboard";
     if (panel === "links" || panel === "redirects" || panel === "canvas-edit") return "links";
     if (panel === "my-cards" || panel === "all-cards") return "cards";
-    if (panel === "products" || panel === "social-profile" || panel === "hobbies-bio" || panel === "quick-links" || panel === "integrations") return "workspaces";
+    if (panel === "products" || panel === "social-profile" || panel === "workspace-links" || panel === "hobbies-bio" || panel === "quick-links" || panel === "integrations") return "workspaces";
     return "settings";
   };
 
@@ -390,6 +391,17 @@ export default function AdminLayout({
               >
                 <Globe className="w-4 h-4 shrink-0" />
                 Social Profiles
+              </button>
+              <button
+                onClick={() => setActivePanel("workspace-links")}
+                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                  activePanel === "workspace-links"
+                    ? "bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm border border-slate-200 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+                }`}
+              >
+                <Link2 className="w-4 h-4 shrink-0" />
+                Custom Fields
               </button>
               {/* <button
                 onClick={() => setActivePanel("integrations")}

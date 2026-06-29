@@ -15,6 +15,14 @@ export interface SocialLink {
   id: string;
   platform: 'website' | 'email' | 'share' | 'github' | 'twitter' | 'linkedin' | 'instagram' | 'youtube' | 'facebook' | string;
   url: string;
+  active?: boolean;
+}
+
+export interface CustomField {
+  id: string;
+  key: string;
+  value: string;
+  active?: boolean;
 }
 
 export interface DigitalCard {
@@ -66,6 +74,7 @@ export interface ProfileInfo {
   cards: DigitalCard[];
   products: ProductItem[];
   integrations: IntegrationItem[];
+  customFields: CustomField[];
   wid?: number;
   trialEndsAt?: string;
   subscriptionStatus?: "trial" | "active" | "expired";
@@ -75,7 +84,7 @@ interface ProfileState {
   profile: ProfileInfo;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   updateProfileInfo: (info: Partial<ProfileInfo>) => void;
-  addLink: (link: Omit<LinkItem, 'id'>) => void;
+  addLink: (link: Omit<LinkItem, 'id'> & { id?: string }) => void;
   updateLink: (id: string, updates: Partial<LinkItem>) => void;
   removeLink: (id: string) => void;
   reorderLinks: (newLinks: LinkItem[]) => void;
@@ -109,9 +118,9 @@ const DEFAULT_PROFILE: ProfileInfo = {
   trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
   subscriptionStatus: 'trial',
   socialLinks: [
-    { id: '1', platform: 'website', url: 'https://anshapps.com' },
-    { id: '2', platform: 'email', url: 'mailto:ansh@anshapps.com' },
-    { id: '3', platform: 'linkedin', url: 'https://linkedin.com' },
+    { id: '1', platform: 'website', url: 'https://anshapps.com', active: true },
+    { id: '2', platform: 'email', url: 'mailto:ansh@anshapps.com', active: true },
+    { id: '3', platform: 'linkedin', url: 'https://linkedin.com', active: true },
   ],
   links: [
     {
@@ -176,7 +185,8 @@ const DEFAULT_PROFILE: ProfileInfo = {
     { id: 'i1', provider: 'stripe', connected: false },
     { id: 'i2', provider: 'mailchimp', connected: false },
     { id: 'i3', provider: 'analytics', connected: false },
-  ]
+  ],
+  customFields: []
 };
 
 export const useProfileStore = create<ProfileState>()(
@@ -196,7 +206,7 @@ export const useProfileStore = create<ProfileState>()(
             ...state.profile,
             links: [
               ...state.profile.links,
-              { ...link, id: `link-${Date.now()}` },
+              { ...link, id: link.id || `link-${Date.now()}` },
             ],
           },
         })),

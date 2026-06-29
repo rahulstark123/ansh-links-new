@@ -158,7 +158,7 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
   };
 
   return (
-    <div className="p-8 sm:p-10 space-y-8 max-w-4xl mx-auto animate-fadeIn font-sans">
+    <div className="p-8 sm:p-10 space-y-8 w-full animate-fadeIn font-sans">
       {subTab === "profile" && (
         <div className="space-y-6">
           {/* Profile Hero Card */}
