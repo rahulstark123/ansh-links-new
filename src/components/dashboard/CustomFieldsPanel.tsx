@@ -2,9 +2,22 @@
 
 import { useProfileStore, CustomField } from "@/store/useProfileStore";
 import DeleteConfirmModal from "@/components/common/DeleteConfirmModal";
+import DynamicIcon from "@/components/common/DynamicIcon";
+import {
+  createCustomField,
+  updateCustomField,
+  deleteCustomField,
+  fetchCustomFields,
+} from "@/lib/custom-fields-api";
 import { Link2, Plus, Edit2, Trash2, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+
+const PRESET_ICONS = [
+  "Link2", "MapPin", "GraduationCap", "Heart", "Star", "BookOpen",
+  "Home", "Calendar", "Quote", "Briefcase", "Mail", "Globe",
+  "MessageCircle", "Phone", "Award", "Flame", "Github", "Linkedin",
+];
 
 export interface CustomFieldModalProps {
   isOpen: boolean;
@@ -16,6 +29,7 @@ export interface CustomFieldModalProps {
 export function CustomFieldModal({ isOpen, onClose, onSave, fieldToEdit }: CustomFieldModalProps) {
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
+  const [icon, setIcon] = useState("Link2");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -27,9 +41,11 @@ export function CustomFieldModal({ isOpen, onClose, onSave, fieldToEdit }: Custo
     if (fieldToEdit) {
       setKey(fieldToEdit.key);
       setValue(fieldToEdit.value);
+      setIcon(fieldToEdit.icon || "Link2");
     } else {
       setKey("");
       setValue("");
+      setIcon("Link2");
     }
   }, [fieldToEdit, isOpen]);
 
@@ -41,6 +57,7 @@ export function CustomFieldModal({ isOpen, onClose, onSave, fieldToEdit }: Custo
     onSave({
       key: key.trim(),
       value: value.trim(),
+      icon,
       active: fieldToEdit ? fieldToEdit.active : false,
     });
     onClose();
@@ -53,14 +70,14 @@ export function CustomFieldModal({ isOpen, onClose, onSave, fieldToEdit }: Custo
         <div className="h-16 flex items-center justify-between px-6 border-b border-outline-variant/5">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center text-indigo-650 dark:text-indigo-400">
-              <Link2 className="w-4 h-4" />
+              <DynamicIcon name={icon} className="w-4 h-4" />
             </div>
             <h3 className="text-sm font-black tracking-tight">{fieldToEdit ? "Edit Custom Field" : "Create Custom Field"}</h3>
           </div>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
             <label className="text-xs font-black tracking-wider text-slate-500 block mb-1.5">
               Field Label / Title
@@ -85,6 +102,29 @@ export function CustomFieldModal({ isOpen, onClose, onSave, fieldToEdit }: Custo
               className="premium-input-large text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold"
               placeholder="e.g. Mumbai, IIT Bombay, Stay Hungry"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-black tracking-wider text-slate-500 block mb-2">
+              Select Icon
+            </label>
+            <div className="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-950/40 border border-outline-variant/5 rounded-2xl">
+              {PRESET_ICONS.map((ico) => (
+                <button
+                  key={ico}
+                  type="button"
+                  onClick={() => setIcon(ico)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    icon === ico
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/10 scale-95"
+                      : "bg-white dark:bg-slate-900 border border-outline-variant/10 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  }`}
+                  title={ico}
+                >
+                  <DynamicIcon name={ico} className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -121,6 +161,21 @@ export default function CustomFieldsPanel() {
 
   const fields = profile.customFields || [];
 
+  useEffect(() => {
+    if (!profile.wid) return;
+    fetchCustomFields(profile.wid)
+      .then((loaded) => useProfileStore.getState().updateProfileInfo({ customFields: loaded }))
+      .catch(console.error);
+  }, [profile.wid]);
+
+  const requireWid = () => {
+    if (!profile.wid) {
+      alert("Workspace ID not found. Please reload your profile.");
+      return false;
+    }
+    return true;
+  };
+
   const handleOpenCreate = () => {
     setEditingField(null);
     setModalOpen(true);
@@ -136,45 +191,46 @@ export default function CustomFieldsPanel() {
     setIsConfirmOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (deletingField) {
+  const handleConfirmDelete = async () => {
+    if (!deletingField || !requireWid()) return;
+    try {
+      await deleteCustomField(deletingField.id);
       const updated = fields.filter((l) => l.id !== deletingField.id);
       updateProfileInfo({ customFields: updated });
       setDeletingField(null);
-      setTimeout(() => {
-        useProfileStore.getState().syncWithCloud();
-      }, 100);
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message);
     }
   };
 
-  const handleSaveField = (fieldData: Omit<CustomField, "id">) => {
-    let updated = [...fields];
-
-    if (editingField) {
-      updated = updated.map((l) =>
-        l.id === editingField.id ? { ...l, ...fieldData } : l
-      );
-    } else {
-      updated.push({
-        id: `field-${Date.now()}`,
-        ...fieldData,
-      });
+  const handleSaveField = async (fieldData: Omit<CustomField, "id">) => {
+    if (!requireWid()) return;
+    try {
+      if (editingField) {
+        const saved = await updateCustomField(editingField.id, profile.wid!, fieldData);
+        const updated = fields.map((l) => (l.id === editingField.id ? saved : l));
+        updateProfileInfo({ customFields: updated });
+      } else {
+        const saved = await createCustomField(profile.wid!, fieldData);
+        updateProfileInfo({ customFields: [...fields, saved] });
+      }
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message);
     }
-
-    updateProfileInfo({ customFields: updated });
-    setTimeout(() => {
-      useProfileStore.getState().syncWithCloud();
-    }, 100);
   };
 
-  const handleToggleActive = (field: CustomField) => {
-    const updated = fields.map((l) =>
-      l.id === field.id ? { ...l, active: !l.active } : l
-    );
-    updateProfileInfo({ customFields: updated });
-    setTimeout(() => {
-      useProfileStore.getState().syncWithCloud();
-    }, 100);
+  const handleToggleActive = async (field: CustomField) => {
+    if (!requireWid()) return;
+    try {
+      const saved = await updateCustomField(field.id, profile.wid!, { active: !field.active });
+      const updated = fields.map((l) => (l.id === field.id ? saved : l));
+      updateProfileInfo({ customFields: updated });
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message);
+    }
   };
 
   return (
@@ -209,7 +265,7 @@ export default function CustomFieldsPanel() {
           >
             <div className="flex items-center gap-4 min-w-0">
               <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-650 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                <Link2 className="w-5 h-5" />
+                <DynamicIcon name={field.icon || "Link2"} className="w-5 h-5" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

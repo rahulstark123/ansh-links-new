@@ -269,10 +269,8 @@ export async function POST(
       userId,
       links,
       socialLinks,
-      cards,
       products,
       integrations,
-      customFields,
     } = body;
 
     const result = await prisma.$transaction(async (tx) => {
@@ -365,26 +363,7 @@ export async function POST(
         });
       }
 
-      // 4. Synchronize digital cards
-      await tx.digitalCard.deleteMany({ where: { profileId: profile.id } });
-      if (cards && cards.length > 0) {
-        await tx.digitalCard.createMany({
-          data: cards.map((c: any) => ({
-            cardName: c.cardName,
-            jobTitle: c.jobTitle,
-            company: c.company,
-            companyTagline: c.companyTagline || null,
-            phone: c.phone,
-            email: c.email,
-            website: c.website,
-            theme: c.theme,
-            active: c.active ?? true,
-            qrLink: c.qrLink || null,
-            profileId: profile.id,
-            wid,
-          })),
-        });
-      }
+      // Digital cards are managed via /api/cards (wid-scoped), not profile sync.
 
       // 5. Synchronize products
       await tx.product.deleteMany({ where: { profileId: profile.id } });
@@ -417,19 +396,7 @@ export async function POST(
         });
       }
 
-      // 8. Synchronize custom fields
-      await tx.customField.deleteMany({ where: { profileId: profile.id } });
-      if (customFields && customFields.length > 0) {
-        await tx.customField.createMany({
-          data: customFields.map((cf: any) => ({
-            key: cf.key,
-            value: cf.value,
-            active: cf.active !== undefined ? cf.active : true,
-            profileId: profile.id,
-            wid,
-          })),
-        });
-      }
+      // Custom fields are managed via /api/custom-fields (wid-scoped), not profile sync.
 
       const fullProfile = await tx.profile.findUnique({
         where: { id: profile.id },

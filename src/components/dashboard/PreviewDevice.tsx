@@ -2,16 +2,21 @@
 
 import { useProfileStore } from "@/store/useProfileStore";
 import DynamicIcon from "@/components/common/DynamicIcon";
+import { isCustomFieldActive } from "@/lib/custom-fields-api";
 import { ArrowRight } from "lucide-react";
 import { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
 import QuickLinksRow from "@/components/dashboard/QuickLinksRow";
+import { LANDING_DEMO_PROFILE } from "@/lib/landing-demo-profile";
 
 interface PreviewDeviceProps {
   viewMode?: "mobile" | "tablet" | "desktop";
+  /** Use static demo content (marketing landing page) instead of live profile store */
+  demo?: boolean;
 }
 
-export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProps) {
-  const { profile } = useProfileStore();
+export default function PreviewDevice({ viewMode = "mobile", demo = false }: PreviewDeviceProps) {
+  const liveProfile = useProfileStore((s) => s.profile);
+  const profile = demo ? LANDING_DEMO_PROFILE : liveProfile;
 
   const getThemeClasses = () => {
     switch (profile.theme) {
@@ -193,13 +198,14 @@ export default function PreviewDevice({ viewMode = "mobile" }: PreviewDeviceProp
         )}
 
         {/* Custom Fields list tags */}
-        {profile.customFields && profile.customFields.filter(cf => cf.active !== false).length > 0 && (
+        {profile.customFields && profile.customFields.filter(isCustomFieldActive).length > 0 && (
           <div className="w-full max-w-[310px] mb-5 flex flex-wrap justify-center gap-1.5 px-2">
-            {profile.customFields.filter(cf => cf.active !== false).map((field) => (
+            {profile.customFields.filter(isCustomFieldActive).map((field) => (
               <div
                 key={field.id}
                 className="px-2.5 py-1 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/20 rounded-xl text-[9px] font-bold text-indigo-900 dark:text-indigo-200 shadow-sm flex items-center gap-1"
               >
+                <DynamicIcon name={field.icon || "Link2"} className="w-3 h-3 opacity-70 shrink-0" />
                 <span className="opacity-70">{field.key}:</span>
                 <span className="font-extrabold">{field.value}</span>
               </div>

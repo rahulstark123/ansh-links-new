@@ -22,6 +22,7 @@ export interface CustomField {
   id: string;
   key: string;
   value: string;
+  icon?: string;
   active?: boolean;
 }
 
@@ -31,6 +32,7 @@ export interface DigitalCard {
   jobTitle: string;
   company: string;
   companyTagline?: string;
+  companyLogo?: string;
   phone: string;
   email: string;
   website: string;

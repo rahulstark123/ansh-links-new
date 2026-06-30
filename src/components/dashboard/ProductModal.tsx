@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { compressImageForUpload } from "@/lib/compress-image";
 import { createPortal } from "react-dom";
 import { useProfileStore, ProductItem } from "@/store/useProfileStore";
 import { X, Briefcase, Image as ImageIcon, UploadCloud, Trash2, Globe, Link as LinkIcon } from "lucide-react";
@@ -107,16 +108,17 @@ export default function ProductModal({ isOpen, onClose, productToEdit, showToast
     }
   };
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith("image/")) return;
 
+    const compressed = await compressImageForUpload(file, "general");
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
         setImageUrl(e.target.result as string);
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(compressed);
   };
 
   const handleFileDrop = (e: React.DragEvent) => {

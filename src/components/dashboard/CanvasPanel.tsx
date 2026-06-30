@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProfileStore, SocialLink, CustomField } from "@/store/useProfileStore";
 import PreviewDevice from "@/components/dashboard/PreviewDevice";
 import DynamicIcon from "@/components/common/DynamicIcon";
@@ -8,6 +8,13 @@ import SocialLinkModal, { PLATFORM_PRESETS } from "@/components/dashboard/Social
 import ProductModal from "@/components/dashboard/ProductModal";
 import LinkCreateModal from "@/components/dashboard/LinkCreateModal";
 import { CustomFieldModal } from "@/components/dashboard/CustomFieldsPanel";
+import {
+  createCustomField,
+  updateCustomField,
+  fetchCustomFields,
+  isCustomFieldActive,
+} from "@/lib/custom-fields-api";
+import { uploadCompressedImage } from "@/lib/upload-image";
 import {
   User,
   Layout,
@@ -39,6 +46,7 @@ import ProfileFillDropdown from "@/components/dashboard/ProfileFillDropdown";
 interface CanvasPanelProps {
   linkId: string;
   onBack: () => void;
+  previewOnly?: boolean;
 }
 
 const PRESET_ICONS = [
@@ -63,7 +71,7 @@ const HOBBIES_PRESETS = [
 ];
 
 
-export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
+export default function CanvasPanel({ linkId, onBack, previewOnly = false }: CanvasPanelProps) {
   const {
     profile,
     updateLink,
@@ -110,6 +118,49 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2500);
   };
+
+  const applyCustomFieldUpdate = (saved: CustomField) => {
+    const fields = profile.customFields || [];
+    const exists = fields.some((cf) => cf.id === saved.id);
+    const updated = exists
+      ? fields.map((cf) => (cf.id === saved.id ? saved : cf))
+      : [...fields, saved];
+    updateProfileInfo({ customFields: updated });
+  };
+
+  const patchCustomFieldActive = async (field: CustomField, active: boolean, successMessage: string) => {
+    if (!profile.wid) {
+      showToast("Workspace not found. Please reload your profile.", "error");
+      return;
+    }
+    try {
+      const saved = await updateCustomField(field.id, profile.wid, { active });
+      applyCustomFieldUpdate(saved);
+      showToast(successMessage, "success");
+    } catch (err) {
+      showToast((err as Error).message, "error");
+    }
+  };
+
+  const loadCustomFields = () => {
+    if (!profile.wid) return;
+    fetchCustomFields(profile.wid)
+      .then((loaded) => updateProfileInfo({ customFields: loaded }))
+      .catch((err) => console.error("Failed to load custom fields:", err));
+  };
+
+  useEffect(() => {
+    loadCustomFields();
+  }, [profile.wid]);
+
+  useEffect(() => {
+    if (activeSection === "customLinks") {
+      loadCustomFields();
+    }
+  }, [activeSection]);
+
+  const allCustomFields = profile.customFields || [];
+  const featuredCustomFields = allCustomFields.filter(isCustomFieldActive);
 
   const handlePublish = async () => {
     await syncWithCloud();
@@ -224,9 +275,10 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
           className="flex items-center justify-center gap-2.5 px-5 py-3 rounded-2xl border border-slate-300 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-black transition-all cursor-pointer shadow-sm bg-white dark:bg-slate-900"
         >
           <ArrowLeft className="w-4.5 h-4.5" />
-          Back to Links Manager
+          {previewOnly ? "Back to My Links" : "Back to Links Manager"}
         </button>
 
+        {!previewOnly && (
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden lg:inline">
             Workspace Sandbox: <span className="font-extrabold text-indigo-750 dark:text-indigo-400">@{profile.username}</span>
@@ -249,10 +301,12 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
             )}
           </button>
         </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
+      <div className={`grid grid-cols-1 gap-10 items-start ${previewOnly ? "justify-items-center" : "lg:grid-cols-5"}`}>
         
+        {!previewOnly && (
         <div className="lg:col-span-3 space-y-6">
           {/* SECTION 1: Personal Info & Bio */}
           <div className={`bg-white dark:bg-slate-900 border rounded-3xl overflow-hidden transition-all duration-300 ${
@@ -354,17 +408,10 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                                   onChange={async (e) => {
                                     const file = e.target.files?.[0];
                                     if (!file) return;
-                                    const formData = new FormData();
-                                    formData.append("file", file);
                                     try {
                                       updateProfileInfo({ avatar: "" });
-                                      const res = await fetch("/api/upload", {
-                                        method: "POST",
-                                        body: formData,
-                                      });
-                                      if (!res.ok) throw new Error("Upload failed");
-                                      const data = await res.json();
-                                      updateProfileInfo({ avatar: data.url });
+                                      const url = await uploadCompressedImage(file, "avatar");
+                                      updateProfileInfo({ avatar: url });
                                     } catch (err) {
                                       console.error(err);
                                       alert("Failed to upload avatar image to Cloudflare R2.");
@@ -637,10 +684,10 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
           </div>
 
           {/* SECTION 6: Custom Page Links (Multiple Links Manager) */}
-          <div className={`bg-white dark:bg-slate-900 border rounded-3xl overflow-hidden transition-all duration-300 ${
+          <div className={`bg-white dark:bg-slate-900 border rounded-3xl transition-all duration-300 ${
             activeSection === "customLinks"
-              ? "border-indigo-500/50 dark:border-indigo-500/35 shadow-[0_10px_30px_-5px_rgba(79,70,229,0.08)]"
-              : "border-slate-200 dark:border-slate-800 shadow-sm"
+              ? `border-indigo-500/50 dark:border-indigo-500/35 shadow-[0_10px_30px_-5px_rgba(79,70,229,0.08)] overflow-visible ${customFieldDropdownOpen ? "relative z-40" : ""}`
+              : "border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
           }`}>
             <button
               onClick={() => toggleSection("customLinks")}
@@ -663,23 +710,23 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
             <AnimatePresence initial={false}>
               {activeSection === "customLinks" && (
                 <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
+                  initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+                  animate={{ height: "auto", opacity: 1, transitionEnd: { overflow: "visible" } }}
+                  exit={{ height: 0, opacity: 0, transitionEnd: { overflow: "hidden" } }}
                   transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
                   <div className="p-6 space-y-4">
                     {/* List all custom fields featured on the profile */}
                     <div className="space-y-3">
-                      {(profile.customFields || []).filter((cf) => cf.active !== false).map((field) => (
+                      {featuredCustomFields.map((field) => (
                         <div
                           key={field.id}
                           className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-805 rounded-2xl shadow-inner animate-fadeIn"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-850 flex items-center justify-center shrink-0 text-slate-500">
-                              <Link2 className="w-4 h-4" />
+                              <DynamicIcon name={field.icon || "Link2"} className="w-4 h-4" />
                             </div>
                             <div className="min-w-0">
                               <span className="text-xs font-black block leading-none capitalize">{field.key}</span>
@@ -701,13 +748,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                const updated = (profile.customFields || []).map((cf) =>
-                                  cf.id === field.id ? { ...cf, active: false } : cf
-                                );
-                                updateProfileInfo({ customFields: updated });
-                                showToast("Custom field hidden from profile page.", "success");
-                              }}
+                              onClick={() => patchCustomFieldActive(field, false, "Custom field hidden from profile page.")}
                               className="w-7 h-7 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-955/20 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                               title="Hide from profile page"
                             >
@@ -717,7 +758,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                         </div>
                       ))}
 
-                      {(profile.customFields || []).filter((cf) => cf.active !== false).length === 0 && (
+                      {featuredCustomFields.length === 0 && (
                         <div className="text-center py-8 text-slate-455 font-bold text-xs border border-dashed border-slate-202/50 dark:border-slate-802 rounded-2xl bg-slate-50/30">
                           No active custom fields on profile. Select from the dropdown below to feature one.
                         </div>
@@ -725,7 +766,7 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                     </div>
 
                     {/* Custom Field selector dropdown trigger */}
-                    <div className="relative">
+                    <div className="relative z-50">
                       <button
                         type="button"
                         onClick={() => setCustomFieldDropdownOpen(!customFieldDropdownOpen)}
@@ -742,23 +783,41 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
                         <>
                           <div className="fixed inset-0 z-30" onClick={() => setCustomFieldDropdownOpen(false)} />
                           <div className="absolute left-0 right-0 mt-2 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-2xl shadow-xl z-[100] p-2 space-y-1 animate-fadeIn">
-                            {(profile.customFields || []).filter((cf) => !cf.active).map((field) => (
+                            {allCustomFields.length === 0 && (
+                              <p className="px-4 py-3 text-[10px] font-bold text-slate-400 text-center">
+                                No custom fields yet. Create one below.
+                              </p>
+                            )}
+                            {allCustomFields.map((field) => {
+                              const isActive = isCustomFieldActive(field);
+                              return (
                               <button
                                 key={field.id}
                                 type="button"
-                                onClick={() => {
-                                  const updated = profile.customFields.map((cf) =>
-                                    cf.id === field.id ? { ...cf, active: true } : cf
-                                  );
-                                  updateProfileInfo({ customFields: updated });
+                                disabled={isActive}
+                                onClick={async () => {
+                                  if (isActive) return;
+                                  await patchCustomFieldActive(field, true, "Custom field featured on profile!");
                                   setCustomFieldDropdownOpen(false);
-                                  showToast("Custom field featured on profile!", "success");
                                 }}
-                                className="w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-305 hover:bg-indigo-55 dark:hover:bg-indigo-955/40 hover:text-indigo-600 dark:hover:text-indigo-400 text-left transition-colors cursor-pointer"
+                                className={`w-full flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-xs font-extrabold text-left transition-colors ${
+                                  isActive
+                                    ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 cursor-default"
+                                    : "text-slate-700 dark:text-slate-305 hover:bg-indigo-55 dark:hover:bg-indigo-955/40 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                                }`}
                               >
-                                <span>{field.key}: {field.value}</span>
+                                {isActive ? (
+                                  <Check className="w-3.5 h-3.5 shrink-0" />
+                                ) : (
+                                  <DynamicIcon name={field.icon || "Link2"} className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                                )}
+                                <span className="flex-1">{field.key}: {field.value}</span>
+                                {isActive && (
+                                  <span className="text-[9px] font-black uppercase tracking-wider opacity-70">Featured</span>
+                                )}
                               </button>
-                            ))}
+                            );
+                            })}
                             
                             <button
                               type="button"
@@ -1012,9 +1071,10 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
           </div>
 
         </div>
+        )}
 
         {/* Right Phone Mockup Panel with Viewport Switcher */}
-        <div className="lg:col-span-2 sticky top-8 flex flex-col items-center gap-6 z-10 w-full min-w-0">
+        <div className={`${previewOnly ? "w-full max-w-2xl" : "lg:col-span-2"} sticky top-8 flex flex-col items-center gap-6 z-10 w-full min-w-0`}>
           
           {/* Viewport switcher toolbar */}
           <div className="flex bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 p-2 rounded-2xl shadow-sm gap-1.5">
@@ -1093,23 +1153,24 @@ export default function CanvasPanel({ linkId, onBack }: CanvasPanelProps) {
           setCustomFieldModalOpen(false);
           setEditingCustomField(null);
         }}
-        onSave={(fieldData) => {
-          let updated = [...(profile.customFields || [])];
-          if (editingCustomField) {
-            // Edit existing
-            updated = updated.map((cf) =>
-              cf.id === editingCustomField.id ? { ...cf, ...fieldData } : cf
-            );
-            showToast("Custom field updated successfully!", "success");
-          } else {
-            // Create new
-            updated.push({
-              id: `field-${Date.now()}`,
-              ...fieldData,
-            });
-            showToast("Custom field created and featured on profile!", "success");
+        onSave={async (fieldData) => {
+          if (!profile.wid) {
+            showToast("Workspace not found. Please reload your profile.", "error");
+            return;
           }
-          updateProfileInfo({ customFields: updated });
+          try {
+            if (editingCustomField) {
+              const saved = await updateCustomField(editingCustomField.id, profile.wid, fieldData);
+              applyCustomFieldUpdate(saved);
+              showToast("Custom field updated successfully!", "success");
+            } else {
+              const saved = await createCustomField(profile.wid, { ...fieldData, active: true });
+              applyCustomFieldUpdate(saved);
+              showToast("Custom field created and featured on profile!", "success");
+            }
+          } catch (err) {
+            showToast((err as Error).message, "error");
+          }
         }}
         fieldToEdit={editingCustomField}
       />

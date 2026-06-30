@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useProfileStore } from "@/store/useProfileStore";
+import Pagination, { PAGE_SIZE, getPageCount } from "@/components/common/Pagination";
 import {
   Layers,
   Search,
@@ -37,6 +38,11 @@ interface TrafficResponse {
     topCountryPercent: number;
   };
   logs: LogEntry[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+  };
 }
 
 function formatDuration(seconds: number) {
@@ -52,6 +58,18 @@ export default function TrafficLogsPanel() {
   const [actionFilter, setActionFilter] = useState<string>("All");
   const [data, setData] = useState<TrafficResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [actionFilter, searchTerm]);
+
+  const totalLogs = data?.pagination?.total ?? data?.logs?.length ?? 0;
+
+  useEffect(() => {
+    const maxPage = getPageCount(totalLogs);
+    if (currentPage > maxPage) setCurrentPage(maxPage);
+  }, [totalLogs, currentPage]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -59,6 +77,8 @@ export default function TrafficLogsPanel() {
     else params.set("username", profile.username);
     if (actionFilter !== "All") params.set("action", actionFilter);
     if (searchTerm.trim()) params.set("search", searchTerm.trim());
+    params.set("page", String(currentPage));
+    params.set("limit", String(PAGE_SIZE));
 
     const timer = setTimeout(() => {
       setLoading(true);
@@ -70,7 +90,7 @@ export default function TrafficLogsPanel() {
     }, searchTerm ? 400 : 0);
 
     return () => clearTimeout(timer);
-  }, [profile.wid, profile.username, actionFilter, searchTerm]);
+  }, [profile.wid, profile.username, actionFilter, searchTerm, currentPage]);
 
   const getDeviceIcon = (device: string) => {
     switch (device) {
@@ -272,6 +292,12 @@ export default function TrafficLogsPanel() {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          page={currentPage}
+          total={totalLogs}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
     </div>

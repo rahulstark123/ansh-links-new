@@ -54,7 +54,8 @@ export type PanelType =
   | "settings-profile"
   | "settings-billing"
   | "settings-security"
-  | "canvas-edit";
+  | "canvas-edit"
+  | "canvas-preview";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -146,7 +147,7 @@ export default function AdminLayout({
   // Derive primary category
   const getPrimaryCategory = (panel: PanelType): "dashboard" | "links" | "cards" | "workspaces" | "settings" => {
     if (panel === "dashboard" || panel === "traffic") return "dashboard";
-    if (panel === "links" || panel === "redirects" || panel === "canvas-edit") return "links";
+    if (panel === "links" || panel === "redirects" || panel === "canvas-edit" || panel === "canvas-preview") return "links";
     if (panel === "my-cards" || panel === "all-cards") return "cards";
     if (panel === "products" || panel === "social-profile" || panel === "workspace-links" || panel === "hobbies-bio" || panel === "quick-links" || panel === "integrations") return "workspaces";
     return "settings";
@@ -174,7 +175,7 @@ export default function AdminLayout({
   const paletteItems = [
     { id: "p1", label: "Dashboard Analytics Overview", category: "Quick Navigation", action: () => setActivePanel("dashboard"), icon: BarChart3 },
     { id: "p2", label: "Traffic Regional Activity Logs", category: "Quick Navigation", action: () => setActivePanel("traffic"), icon: Layers },
-    { id: "p3", label: "My Custom Links Manager", category: "Quick Navigation", action: () => setActivePanel("links"), icon: Link2 },
+    { id: "p3", label: "My Links", category: "Quick Navigation", action: () => setActivePanel("links"), icon: Link2 },
     { id: "p4", label: "Redirect Rules Configuration", category: "Quick Navigation", action: () => setActivePanel("redirects"), icon: Sliders },
     { id: "p5", label: "My Digital Cards Mockups", category: "Quick Navigation", action: () => setActivePanel("my-cards"), icon: CreditCard },
     { id: "p6", label: "Ready-Made Card Templates", category: "Quick Navigation", action: () => setActivePanel("all-cards"), icon: Sparkles },
@@ -187,7 +188,7 @@ export default function AdminLayout({
     { id: "p11", label: "Billing & Subscription Tiers", category: "Quick Navigation", action: () => setActivePanel("settings-billing"), icon: CreditCard },
     { id: "p12", label: "Security Credentials Configuration", category: "Quick Navigation", action: () => setActivePanel("settings-security"), icon: Shield },
     { id: "s1", label: "Copy Public Profile Link", category: "Shortcuts & Actions", action: () => handleCopyLink(), icon: Copy },
-    { id: "s2", label: "Exit Sanctuary Dashboard", category: "Shortcuts & Actions", action: () => handleSignOut(), icon: LogOut },
+    { id: "s2", label: "Logout", category: "Shortcuts & Actions", action: () => handleSignOut(), icon: LogOut },
   ];
 
   const filteredPaletteItems = paletteItems.filter((item) =>
@@ -291,7 +292,7 @@ export default function AdminLayout({
                 }`}
               >
                 <Link2 className="w-4 h-4 shrink-0" />
-                My Custom Links
+                My Links
               </button>
               <button
                 onClick={() => setActivePanel("redirects")}
@@ -480,16 +481,15 @@ export default function AdminLayout({
         
         {/* Brand Header */}
         <div className={`w-full flex items-center gap-3 shrink-0 ${isPrimaryCollapsed ? "justify-center" : "px-3 mb-6"}`}>
-          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-md cursor-pointer shrink-0 overflow-hidden p-1">
-            <img src="/logoAnshapps.png" alt="ANSH Apps" className="w-full h-full object-contain" />
-          </div>
+          <img
+            src="/logoAnshapps.png"
+            alt="ANSH Apps"
+            className="w-10 h-10 object-contain shrink-0 cursor-pointer"
+          />
           {!isPrimaryCollapsed && (
             <div className="flex flex-col animate-fadeIn min-w-0">
               <span className="text-sm font-black tracking-tight text-white leading-none">
                 ANSH <span className="font-light text-slate-400">Links</span>
-              </span>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1 leading-none">
-                Sanctuary
               </span>
             </div>
           )}
@@ -561,11 +561,11 @@ export default function AdminLayout({
             className={`w-full py-2.5 rounded-xl hover:bg-rose-950/20 flex items-center text-rose-500 transition-all cursor-pointer disabled:opacity-50 ${
               isPrimaryCollapsed ? "justify-center" : "px-4 gap-3.5"
             }`}
-            title="Exit Admin"
+            title="Logout"
           >
             <LogOut className="w-4.5 h-4.5 shrink-0" />
             {!isPrimaryCollapsed && (
-              <span className="text-xs font-black tracking-tight animate-fadeIn">Exit Sanctuary</span>
+              <span className="text-xs font-black tracking-tight animate-fadeIn">Logout</span>
             )}
           </button>
         </div>
@@ -597,7 +597,9 @@ export default function AdminLayout({
             <h2 className="text-xs font-black capitalize tracking-widest uppercase hidden sm:block text-slate-500 dark:text-slate-400">
               {activePanel === "dashboard" && "Analytics Overview"}
               {activePanel === "traffic" && "Traffic Logs"}
-              {activePanel === "links" && "My Links Manager"}
+              {activePanel === "links" && "My Links"}
+              {activePanel === "canvas-edit" && "Customize Profile"}
+              {activePanel === "canvas-preview" && "Profile Preview"}
               {activePanel === "redirects" && "Redirect Rules"}
               {activePanel === "my-cards" && "My Digital Cards"}
               {activePanel === "all-cards" && "Ready-Made Templates"}
@@ -618,7 +620,7 @@ export default function AdminLayout({
               <span className="absolute left-3.5 text-slate-400 pointer-events-none">
                 <Search className="w-4 h-4" />
               </span>
-              <span>Search Sanctuary...</span>
+              <span>Search...</span>
               <span className="absolute right-3 text-[9px] font-black text-slate-500 border border-slate-300 dark:border-slate-800 px-1.5 py-0.5 rounded-lg bg-white dark:bg-slate-900 pointer-events-none uppercase tracking-tight shadow-sm">
                 Ctrl K
               </span>
@@ -724,7 +726,7 @@ export default function AdminLayout({
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold hover:bg-rose-50 dark:hover:bg-rose-950/20 text-rose-600 dark:text-rose-450 cursor-pointer disabled:opacity-50"
                     >
                       <LogOut className="w-4.5 h-4.5 text-rose-500" />
-                      Sign Out
+                      Logout
                     </button>
                   </div>
                 </div>

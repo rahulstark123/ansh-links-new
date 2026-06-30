@@ -55,6 +55,18 @@ export default function DashboardPage() {
         return (
           <CanvasPanel
             linkId={activeLinkId || ""}
+            previewOnly={false}
+            onBack={() => {
+              setActivePanel(canvasOrigin);
+              setActiveLinkId(null);
+            }}
+          />
+        );
+      case "canvas-preview":
+        return (
+          <CanvasPanel
+            linkId={activeLinkId || ""}
+            previewOnly
             onBack={() => {
               setActivePanel(canvasOrigin);
               setActiveLinkId(null);
@@ -71,6 +83,11 @@ export default function DashboardPage() {
             onEnterCanvasMode={(id) => {
               setCanvasOrigin(activePanel as "links" | "workspace-links");
               setActivePanel("canvas-edit");
+              setActiveLinkId(id);
+            }}
+            onPreviewLink={(id) => {
+              setCanvasOrigin("links");
+              setActivePanel("canvas-preview");
               setActiveLinkId(id);
             }}
           />

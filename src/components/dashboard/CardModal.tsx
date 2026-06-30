@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useProfileStore, DigitalCard } from "@/store/useProfileStore";
-import { X, CreditCard, Check } from "lucide-react";
+import { DigitalCard } from "@/store/useProfileStore";
+import { X, CreditCard, Check, Upload, ImageIcon } from "lucide-react";
 import { createPortal } from "react-dom";
+import { uploadCompressedImage } from "@/lib/upload-image";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 
@@ -11,6 +12,7 @@ interface CardModalProps {
   isOpen: boolean;
   onClose: () => void;
   cardToEdit?: DigitalCard | null;
+  onSave: (cardData: Omit<DigitalCard, "id">) => void | Promise<void>;
 }
 
 const THEME_OPTIONS = [
@@ -27,13 +29,15 @@ const THEME_OPTIONS = [
   { value: "terracotta", label: "Warm Terracotta", description: "Clay background with retro organic layouts" },
 ] as const;
 
-export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProps) {
-  const { addCard, updateCard } = useProfileStore();
+export default function CardModal({ isOpen, onClose, cardToEdit, onSave }: CardModalProps) {
+  const [saving, setSaving] = useState(false);
 
   const [cardName, setCardName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [companyTagline, setCompanyTagline] = useState("");
+  const [companyLogo, setCompanyLogo] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
   const [phone, setPhone] = useState<string | undefined>("");
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("https://");
@@ -52,6 +56,7 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
       setJobTitle(cardToEdit.jobTitle);
       setCompany(cardToEdit.company);
       setCompanyTagline(cardToEdit.companyTagline || "");
+      setCompanyLogo(cardToEdit.companyLogo || "");
       setPhone(cardToEdit.phone || "");
       setEmail(cardToEdit.email);
       setWebsite(cardToEdit.website);
@@ -62,6 +67,7 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
       setJobTitle("");
       setCompany("");
       setCompanyTagline("");
+      setCompanyLogo("");
       setPhone("");
       setEmail("");
       setWebsite("https://");
@@ -72,7 +78,7 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
 
   if (!isOpen || !mounted) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!cardName.trim() || !jobTitle.trim()) return;
 
     const cardData = {
@@ -80,6 +86,7 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
       jobTitle: jobTitle.trim(),
       company: company.trim(),
       companyTagline: companyTagline.trim(),
+      companyLogo: companyLogo.trim(),
       phone: phone ? phone.trim() : "",
       email: email.trim(),
       website: website.trim(),
@@ -88,12 +95,29 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
       active: cardToEdit ? cardToEdit.active : true,
     };
 
-    if (cardToEdit) {
-      updateCard(cardToEdit.id, cardData);
-    } else {
-      addCard(cardData);
+    try {
+      setSaving(true);
+      await onSave(cardData);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message);
+    } finally {
+      setSaving(false);
     }
-    onClose();
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    try {
+      setLogoUploading(true);
+      const url = await uploadCompressedImage(file, "logo");
+      setCompanyLogo(url);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload company logo.");
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   return createPortal(
@@ -138,21 +162,10 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
             />
           </div>
 
-          {/* Job Title & Company */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5 font-sans">
-                Job Title
-              </label>
-              <input
-                type="text"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                className="premium-input-large font-sans"
-                placeholder="e.g. Lead Designer"
-                required
-              />
-            </div>
+          {/* Company, tagline & logo */}
+          <div className="space-y-4 p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/30 border border-outline-variant/10">
+            <p className="text-[10px] font-black tracking-wider text-slate-400 uppercase">Company branding</p>
+
             <div>
               <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5 font-sans">
                 Company Name
@@ -162,27 +175,88 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
                 className="premium-input-large font-sans"
-                placeholder="e.g. ANSH Apps"
+                placeholder="e.g. ANSH Apps Suite"
               />
+            </div>
+
+            <div>
+              <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5 font-sans">
+                Tagline
+              </label>
+              <input
+                type="text"
+                value={companyTagline}
+                onChange={(e) => setCompanyTagline(e.target.value)}
+                className="premium-input-large font-sans"
+                placeholder="e.g. Building the future of digital identity"
+              />
+              <p className="text-[10px] text-slate-400 font-medium mt-1">
+                Shown directly below the company name on the front of the card.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5 font-sans">
+                Company Logo
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl border border-outline-variant/15 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden shrink-0">
+                  {companyLogo ? (
+                    <img src={companyLogo} alt="Company logo" className="w-full h-full object-contain p-1.5" />
+                  ) : (
+                    <ImageIcon className="w-6 h-6 text-slate-300" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200/50 dark:border-indigo-900/30 hover:bg-indigo-100/60 text-indigo-700 dark:text-indigo-400 text-xs font-bold rounded-xl transition-all cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" />
+                    {logoUploading ? "Uploading..." : "Upload logo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={logoUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleLogoUpload(file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {companyLogo && (
+                    <button
+                      type="button"
+                      onClick={() => setCompanyLogo("")}
+                      className="text-[10px] font-bold text-rose-500 hover:text-rose-600 text-left"
+                    >
+                      Remove logo
+                    </button>
+                  )}
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Displayed in the bottom-right corner on the front of the card.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Company Tagline */}
+          {/* Job Title */}
           <div>
             <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5 font-sans">
-              Company Tagline
+              Job Title
             </label>
             <input
               type="text"
-              value={companyTagline}
-              onChange={(e) => setCompanyTagline(e.target.value)}
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
               className="premium-input-large font-sans"
-              placeholder="e.g. Building the future of digital identity"
+              placeholder="e.g. Founder & CEO"
+              required
             />
           </div>
 
           {/* Contact Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
               <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5 font-sans">
                 Mobile Number
@@ -236,8 +310,8 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
               className="premium-input-large font-sans"
               placeholder="https://drive.google.com/your-cv-link"
             />
-            <p className="text-[10px] text-slate-450 dark:text-slate-500 font-bold mt-1">
-              If provided, scanning the QR Code on the back of this card will direct scanners to this URL instead of your profile page.
+            <p className="text-[10px] text-slate-450 dark:text-slate-500 font-medium mt-1">
+              If provided, the QR code links here instead of your card&apos;s public share page. Leave blank to use your auto-generated card URL.
             </p>
           </div>
 
@@ -279,10 +353,10 @@ export default function CardModal({ isOpen, onClose, cardToEdit }: CardModalProp
           </button>
           <button
             onClick={handleSave}
-            disabled={!cardName.trim() || !jobTitle.trim()}
+            disabled={!cardName.trim() || !jobTitle.trim() || saving}
             className="px-6 py-2.5 rounded-xl text-white primary-gradient text-xs font-bold font-sans shadow-lg shadow-indigo-600/10 hover:scale-[0.98] transition-transform disabled:opacity-50 disabled:pointer-events-none"
           >
-            Save Card
+            {saving ? "Saving..." : "Save Card"}
           </button>
         </div>
 

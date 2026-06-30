@@ -1,6 +1,7 @@
 "use client";
 
 import { useProfileStore } from "@/store/useProfileStore";
+import { createCard } from "@/lib/cards-api";
 import { Sparkles, CreditCard, Check, ArrowRight } from "lucide-react";
 
 interface TemplateCard {
@@ -12,7 +13,7 @@ interface TemplateCard {
 }
 
 export default function AllCardsPanel({ setActivePanel }: { setActivePanel: (panel: any) => void }) {
-  const { addCard } = useProfileStore();
+  const { profile, updateProfileInfo } = useProfileStore();
 
   const templates: TemplateCard[] = [
     {
@@ -73,20 +74,29 @@ export default function AllCardsPanel({ setActivePanel }: { setActivePanel: (pan
     },
   ];
 
-  const handleUseTemplate = (template: TemplateCard) => {
-    addCard({
-      cardName: "Ansh Kumar",
-      jobTitle: "Product Architect",
-      company: "ANSH Apps Suite",
-      phone: "+91 98765 43210",
-      email: "ansh@anshapps.com",
-      website: "https://anshapps.com",
-      theme: template.theme,
-      active: true,
-      qrLink: "",
-    });
-    // Redirect to my cards panel
-    setActivePanel("my-cards");
+  const handleUseTemplate = async (template: TemplateCard) => {
+    if (!profile.wid) {
+      alert("Workspace ID not found. Please reload your profile.");
+      return;
+    }
+    try {
+      const saved = await createCard(profile.wid, {
+        cardName: profile.name || "Ansh Kumar",
+        jobTitle: "Product Architect",
+        company: "ANSH Apps Suite",
+        phone: profile.whatsappNumber || "+91 98765 43210",
+        email: profile.socialLinks?.find((s) => s.platform === "email")?.url.replace("mailto:", "") || "ansh@anshapps.com",
+        website: "https://anshapps.com",
+        theme: template.theme,
+        active: true,
+        qrLink: "",
+      });
+      updateProfileInfo({ cards: [...(profile.cards || []), saved] });
+      setActivePanel("my-cards");
+    } catch (err) {
+      console.error(err);
+      alert((err as Error).message);
+    }
   };
 
   return (

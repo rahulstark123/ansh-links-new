@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProfileStore, LinkItem } from "@/store/useProfileStore";
 import LinkCreateModal from "@/components/dashboard/LinkCreateModal";
 import DeleteConfirmModal from "@/components/common/DeleteConfirmModal";
+import Pagination, { PAGE_SIZE, getPageCount } from "@/components/common/Pagination";
 import DynamicIcon from "@/components/common/DynamicIcon";
 import { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
 import {
@@ -21,18 +22,21 @@ import {
   XCircle,
   MoreVertical,
   Copy,
+  Monitor,
 } from "lucide-react";
 
 interface MyLinksPanelProps {
   searchQuery?: string;
   onEnterCanvasMode: (linkId: string) => void;
+  onPreviewLink: (linkId: string) => void;
 }
 
-export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: MyLinksPanelProps) {
+export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode, onPreviewLink }: MyLinksPanelProps) {
   const { profile, removeLink, updateLink, reorderLinks, addLink } = useProfileStore();
 
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Context dropdown menu selection state
   const [openMenuLinkId, setOpenMenuLinkId] = useState<string | null>(null);
@@ -51,6 +55,20 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
       link.url.toLowerCase().includes(query)
     );
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const maxPage = getPageCount(filteredLinks.length);
+    if (currentPage > maxPage) setCurrentPage(maxPage);
+  }, [filteredLinks.length, currentPage]);
+
+  const paginatedLinks = filteredLinks.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const handleOpenCreate = () => {
     const isTrialActive = profile.subscriptionStatus === "trial" && new Date() < new Date(profile.trialEndsAt || 0);
@@ -166,11 +184,12 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
       {viewMode === "card" ? (
         
         /* CARD GRID VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLinks.map((link, idx) => (
+        <div className="bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+          {paginatedLinks.map((link, idx) => (
             <div
               key={link.id}
-              className={`bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-6 shadow-sm flex flex-col justify-between transition-all hover:shadow-md hover:scale-[1.01] ${
+              className={`border border-outline-variant/10 rounded-3xl p-6 shadow-sm flex flex-col justify-between transition-all hover:shadow-md hover:scale-[1.01] ${
                 !link.active && "opacity-60"
               }`}
             >
@@ -181,19 +200,8 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                   <DynamicIcon name={link.icon || "Link2"} className="w-5.5 h-5.5" />
                 </div>
                 
-                {/* Quick actions & Toggle */}
+                {/* Quick actions menu */}
                 <div className="flex items-center gap-1.5 relative">
-                  <button
-                    onClick={() => handleToggleActive(link)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
-                      link.active
-                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-400"
-                    }`}
-                  >
-                    {link.active ? "Active" : "Disabled"}
-                  </button>
-
                   <div className="relative">
                     <button
                       onClick={(e) => {
@@ -210,6 +218,16 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                       <>
                         <div className="fixed inset-0 z-30" onClick={() => setOpenMenuLinkId(null)} />
                         <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-xl shadow-lg z-40 p-1.5 space-y-1 animate-fadeIn">
+                          <button
+                            onClick={() => {
+                              onPreviewLink(link.id);
+                              setOpenMenuLinkId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg text-left"
+                          >
+                            <Monitor className="w-3.5 h-3.5" />
+                            Preview
+                          </button>
                           <button
                             onClick={() => {
                               handleOpenEdit(link);
@@ -286,9 +304,37 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                   <Eye className="w-4 h-4" />
                   <span>{(link as any).clicks || 0} clicks</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onPreviewLink(link.id)}
+                    className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <Monitor className="w-3.5 h-3.5" />
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleActive(link)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
+                      link.active
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-950/60"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    {link.active ? "Active" : "Inactive"}
+                  </button>
+                </div>
               </div>
             </div>
           ))}
+          </div>
+
+          <Pagination
+            page={currentPage}
+            total={filteredLinks.length}
+            onPageChange={setCurrentPage}
+          />
         </div>
       ) : (
         
@@ -307,7 +353,7 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/5 text-sm font-semibold">
-                {filteredLinks.map((link, idx) => (
+                {paginatedLinks.map((link, idx) => (
                   <tr
                     key={link.id}
                     className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors ${
@@ -395,6 +441,16 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
                             <div className="absolute right-0 mt-8 w-40 bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-xl shadow-lg z-40 p-1.5 space-y-1 text-left">
                               <button
                                 onClick={() => {
+                                  onPreviewLink(link.id);
+                                  setOpenMenuLinkId(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-55 dark:hover:bg-slate-800 rounded-lg text-left"
+                              >
+                                <Monitor className="w-3.5 h-3.5" />
+                                Preview
+                              </button>
+                              <button
+                                onClick={() => {
                                   handleOpenEdit(link);
                                   setOpenMenuLinkId(null);
                                 }}
@@ -440,6 +496,12 @@ export default function MyLinksPanel({ searchQuery = "", onEnterCanvasMode }: My
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            page={currentPage}
+            total={filteredLinks.length}
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
 

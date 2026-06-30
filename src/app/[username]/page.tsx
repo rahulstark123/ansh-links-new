@@ -8,6 +8,7 @@ import { ArrowRight, Sparkles, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { PLATFORM_PRESETS } from "@/components/dashboard/SocialLinkModal";
 import { trackAnalyticsEvent, TRAFFIC_ACTIONS } from "@/lib/track-client";
+import { isCustomFieldActive } from "@/lib/custom-fields-api";
 import QuickLinksRow from "@/components/dashboard/QuickLinksRow";
 import { supabase } from "@/lib/supabase";
 
@@ -310,13 +311,14 @@ export default function PublicProfilePage() {
         )}
 
         {/* Custom Fields list tags */}
-        {activeProfile.customFields && activeProfile.customFields.filter(cf => cf.active !== false).length > 0 && (
+        {activeProfile.customFields && activeProfile.customFields.filter(isCustomFieldActive).length > 0 && (
           <section className="flex flex-wrap justify-center gap-2 max-w-md mb-8 px-4">
-            {activeProfile.customFields.filter(cf => cf.active !== false).map((field) => (
+            {activeProfile.customFields.filter(isCustomFieldActive).map((field) => (
               <div
                 key={field.id}
                 className="px-3.5 py-1.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100/40 dark:border-indigo-900/20 rounded-xl text-xs font-bold text-indigo-900 dark:text-indigo-200 shadow-sm flex items-center gap-1.5"
               >
+                <DynamicIcon name={field.icon || "Link2"} className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span className="opacity-70">{field.key}:</span>
                 <span className="font-extrabold">{field.value}</span>
               </div>

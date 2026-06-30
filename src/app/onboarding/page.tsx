@@ -8,6 +8,7 @@ import { Sparkles, Phone, ArrowRight, ShieldCheck, Palette, User, Check, ArrowLe
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { supabase } from "@/lib/supabase";
+import { uploadCompressedImage } from "@/lib/upload-image";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function OnboardingPage() {
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [theme, setTheme] = useState<"organic" | "saffron" | "emerald" | "noir" | "silk">("organic");
-  const [avatarUrl, setAvatarUrl] = useState("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -372,11 +373,11 @@ export default function OnboardingPage() {
 
             {/* Avatar Profile Image Uploader */}
             <div className="flex flex-col items-center gap-4 p-4.5 bg-slate-50/50 dark:bg-slate-950/20 border border-slate-200 dark:border-slate-800 rounded-3xl">
-              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-indigo-500/20 shadow-md shrink-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center relative">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-md shrink-0 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 flex items-center justify-center relative">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <User className="w-8 h-8 text-slate-400" />
+                  <User className="w-9 h-9 text-slate-400 dark:text-slate-500" strokeWidth={1.5} />
                 )}
                 {uploadingAvatar && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-[10px] font-black uppercase tracking-wider animate-pulse">
@@ -396,17 +397,10 @@ export default function OnboardingPage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      const formData = new FormData();
-                      formData.append("file", file);
                       try {
                         setUploadingAvatar(true);
-                        const res = await fetch("/api/upload", {
-                          method: "POST",
-                          body: formData,
-                        });
-                        if (!res.ok) throw new Error("Upload failed");
-                        const data = await res.json();
-                        setAvatarUrl(data.url);
+                        const url = await uploadCompressedImage(file, "avatar");
+                        setAvatarUrl(url);
                       } catch (err) {
                         console.error(err);
                         alert("Failed to upload profile image to Cloudflare R2.");
@@ -420,7 +414,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black tracking-wider text-slate-500 dark:text-slate-400 uppercase block mb-1.5">
                   Display Name
@@ -429,7 +423,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="premium-input-large bg-slate-50/50 dark:bg-slate-950 border-slate-350 dark:border-slate-805 text-xs font-bold"
+                  className="premium-input-large bg-slate-50/50 dark:bg-slate-950 border-slate-350 dark:border-slate-805 text-xs font-bold w-full"
                   placeholder="e.g. Ansh Kumar"
                 />
               </div>
@@ -442,7 +436,7 @@ export default function OnboardingPage() {
                   type="text"
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="premium-input-large bg-slate-50/50 dark:bg-slate-950 border-slate-350 dark:border-slate-805 text-xs font-bold"
+                  className="premium-input-large bg-slate-50/50 dark:bg-slate-950 border-slate-350 dark:border-slate-805 text-xs font-bold w-full"
                   placeholder="e.g. Creator & designer"
                 />
               </div>

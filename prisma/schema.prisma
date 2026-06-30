@@ -86,6 +86,7 @@ model DigitalCard {
   jobTitle       String
   company        String
   companyTagline String?
+  companyLogo    String?
   phone          String
   email          String
   website        String
@@ -158,6 +159,7 @@ model CustomField {
   workspace Workspace @relation(fields: [wid], references: [wid], onDelete: Cascade)
   key       String
   value     String
+  icon      String?   @default("Link2")
   active    Boolean   @default(true)
   profileId String
   profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)

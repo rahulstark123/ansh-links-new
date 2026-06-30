@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const actionFilter = searchParams.get("action") || "all";
     const search = (searchParams.get("search") || "").trim().toLowerCase();
     const page = Math.max(1, Number(searchParams.get("page") || 1));
-    const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") || 25)));
+    const limit = Math.min(10, Math.max(1, Number(searchParams.get("limit") || 10)));
 
     const profile = await resolveProfileByWidOrUsername(prisma, wid, username);
     if (!profile) {

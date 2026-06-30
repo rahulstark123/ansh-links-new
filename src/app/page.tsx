@@ -287,7 +287,7 @@ export default function Home() {
               {/* Visual preview */}
               <div className="relative flex justify-center lg:justify-end">
                 <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 to-transparent blur-2xl rounded-full" />
-                <PreviewDevice />
+                <PreviewDevice demo />
               </div>
             </div>
           </div>
