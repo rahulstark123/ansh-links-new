@@ -19,9 +19,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!file.type.startsWith("image/")) {
+    if (!file.type.startsWith("image/") && file.type !== "application/pdf") {
       return NextResponse.json(
-        { error: "Only image files are allowed." },
+        { error: "Only image or PDF files are allowed." },
         { status: 400 }
       );
     }

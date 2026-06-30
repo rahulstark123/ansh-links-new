@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Eye, EyeOff, Sparkles, Check, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +15,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [resetSuccess, setResetSuccess] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reset") === "success") {
+      setResetSuccess(true);
+    }
+  }, []);
 
   const isAuthenticating = loading || googleLoading;
 
@@ -192,6 +200,11 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {resetSuccess && (
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-2xl">
+                Password updated successfully. Sign in with your new password.
+              </div>
+            )}
             {errorMsg && (
               <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 text-rose-600 dark:text-rose-455 text-xs font-bold rounded-2xl">
                 {errorMsg}
@@ -213,14 +226,9 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-[11px] font-black tracking-wider text-slate-550 dark:text-slate-400 uppercase font-sans">
-                  Password
-                </label>
-                <a href="#" className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline">
-                  Forgot password?
-                </a>
-              </div>
+              <label className="text-[11px] font-black tracking-wider text-slate-550 dark:text-slate-400 uppercase block mb-2 font-sans">
+                Password
+              </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -237,6 +245,14 @@ export default function LoginPage() {
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+              </div>
+              <div className="mt-2 text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                >
+                  Forgot password?
+                </Link>
               </div>
             </div>
 

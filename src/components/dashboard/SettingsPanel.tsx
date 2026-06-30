@@ -91,17 +91,37 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
   const handlePlanUpgrade = async (plan: "free" | "pro" | "pro-plus") => {
     if (plan === "free") {
       setSelectedPlan("free");
-      updateProfileInfo({ verified: false });
+      updateProfileInfo({ verified: false, subscriptionStatus: "trial" });
+      return;
+    }
+
+    if (!profile.wid) {
+      alert("Workspace not loaded. Please refresh and try again.");
       return;
     }
 
     setLoadingUpgrade(true);
-    const amount = plan === "pro" 
-      ? (isIndia ? 199 : 5) 
-      : (isIndia ? 399 : 7);
     const currency = isIndia ? "INR" : "USD";
 
     try {
+      const orderRes = await fetch("/api/billing/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wid: profile.wid,
+          plan,
+          currency,
+          countryCode: isIndia ? "IN" : "US",
+        }),
+      });
+
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to create payment order");
+      }
+
+      const orderData = await orderRes.json();
+
       const res = await loadRazorpayScript();
       if (!res) {
         alert("Razorpay payment gateway SDK failed to load. Please check your network connection.");
@@ -110,17 +130,49 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
       }
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_live_SdilED7xPbKcdV",
-        amount: amount * 100, // amount in paisa (INR) or cents (USD)
-        currency: currency,
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        order_id: orderData.orderId,
         name: "ANSH Links",
         description: `Upgrade to ANSH Links ${plan === "pro" ? "Pro" : "Pro Plus"} Plan`,
         image: "/logoAnshapps.png",
-        handler: function (response: any) {
-          setSelectedPlan(plan);
-          updateProfileInfo({ verified: true });
-          setBillingSuccess(true);
-          setTimeout(() => setBillingSuccess(false), 3000);
+        handler: async function (response: {
+          razorpay_order_id: string;
+          razorpay_payment_id: string;
+          razorpay_signature: string;
+        }) {
+          try {
+            const verifyRes = await fetch("/api/billing/verify-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                wid: profile.wid,
+                plan,
+                countryCode: isIndia ? "IN" : "US",
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            if (!verifyRes.ok) {
+              const err = await verifyRes.json().catch(() => ({}));
+              throw new Error(err.error || "Payment verification failed");
+            }
+
+            setSelectedPlan(plan);
+            updateProfileInfo({ verified: true, subscriptionStatus: "active" });
+            setBillingSuccess(true);
+            setTimeout(() => setBillingSuccess(false), 3000);
+          } catch (verifyErr) {
+            console.error(verifyErr);
+            alert(
+              verifyErr instanceof Error
+                ? verifyErr.message
+                : "Payment completed but verification failed. Contact support with your payment ID."
+            );
+          }
         },
         prefill: {
           name: profile.name || "",
@@ -133,10 +185,13 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
       };
 
       const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.on("payment.failed", function (response: { error?: { description?: string } }) {
+        alert(response?.error?.description || "Payment failed. Please try again.");
+      });
       paymentObject.open();
     } catch (err) {
       console.error(err);
-      alert("An error occurred launching the billing portal. Please try again.");
+      alert(err instanceof Error ? err.message : "An error occurred launching the billing portal.");
     } finally {
       setLoadingUpgrade(false);
     }
@@ -554,7 +609,7 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="premium-input-large text-xs pl-11 w-full"
+                  className="premium-input-large text-xs !pl-11 w-full"
                   placeholder="••••••••"
                   required
                 />
@@ -571,7 +626,7 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="premium-input-large text-xs pl-11 w-full"
+                  className="premium-input-large text-xs !pl-11 w-full"
                   placeholder="Minimum 8 characters"
                   required
                 />
@@ -588,7 +643,7 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="premium-input-large text-xs pl-11 w-full"
+                  className="premium-input-large text-xs !pl-11 w-full"
                   placeholder="Repeat new password"
                   required
                 />

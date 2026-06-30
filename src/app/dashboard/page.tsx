@@ -16,6 +16,7 @@ import SettingsPanel from "@/components/dashboard/SettingsPanel";
 import TrafficLogsPanel from "@/components/dashboard/TrafficLogsPanel";
 import RedirectsPanel from "@/components/dashboard/RedirectsPanel";
 import CustomFieldsPanel from "@/components/dashboard/CustomFieldsPanel";
+import SupportPanel from "@/components/dashboard/SupportPanel";
 
 export default function DashboardPage() {
   const [activePanel, setActivePanel] = useState<PanelType>("links");
@@ -51,6 +52,8 @@ export default function DashboardPage() {
         return <SettingsPanel subTab="billing" />;
       case "settings-security":
         return <SettingsPanel subTab="security" />;
+      case "support":
+        return <SupportPanel />;
       case "canvas-edit":
         return (
           <CanvasPanel

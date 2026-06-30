@@ -54,6 +54,7 @@ export type PanelType =
   | "settings-profile"
   | "settings-billing"
   | "settings-security"
+  | "support"
   | "canvas-edit"
   | "canvas-preview";
 
@@ -145,21 +146,23 @@ export default function AdminLayout({
   };
 
   // Derive primary category
-  const getPrimaryCategory = (panel: PanelType): "dashboard" | "links" | "cards" | "workspaces" | "settings" => {
+  const getPrimaryCategory = (panel: PanelType): "dashboard" | "links" | "cards" | "workspaces" | "settings" | "support" => {
     if (panel === "dashboard" || panel === "traffic") return "dashboard";
     if (panel === "links" || panel === "redirects" || panel === "canvas-edit" || panel === "canvas-preview") return "links";
     if (panel === "my-cards" || panel === "all-cards") return "cards";
     if (panel === "products" || panel === "social-profile" || panel === "workspace-links" || panel === "hobbies-bio" || panel === "quick-links" || panel === "integrations") return "workspaces";
+    if (panel === "support") return "support";
     return "settings";
   };
 
   const activeCategory = getPrimaryCategory(activePanel);
 
-  const handleCategoryClick = (category: "dashboard" | "links" | "cards" | "workspaces" | "settings") => {
+  const handleCategoryClick = (category: "dashboard" | "links" | "cards" | "workspaces" | "settings" | "support") => {
     if (category === "dashboard") setActivePanel("dashboard");
     else if (category === "links") setActivePanel("links");
     else if (category === "cards") setActivePanel("my-cards");
     else if (category === "workspaces") setActivePanel("products");
+    else if (category === "support") setActivePanel("support");
     else if (category === "settings") setActivePanel("settings-profile");
   };
 
@@ -187,6 +190,7 @@ export default function AdminLayout({
     { id: "p10", label: "Configure Profile Identity Info", category: "Quick Navigation", action: () => setActivePanel("settings-profile"), icon: User },
     { id: "p11", label: "Billing & Subscription Tiers", category: "Quick Navigation", action: () => setActivePanel("settings-billing"), icon: CreditCard },
     { id: "p12", label: "Security Credentials Configuration", category: "Quick Navigation", action: () => setActivePanel("settings-security"), icon: Shield },
+    { id: "p13", label: "Support Desk & Tickets", category: "Quick Navigation", action: () => setActivePanel("support"), icon: HelpCircle },
     { id: "s1", label: "Copy Public Profile Link", category: "Shortcuts & Actions", action: () => handleCopyLink(), icon: Copy },
     { id: "s2", label: "Logout", category: "Shortcuts & Actions", action: () => handleSignOut(), icon: LogOut },
   ];
@@ -462,6 +466,28 @@ export default function AdminLayout({
             </div>
           </>
         );
+      case "support":
+        return (
+          <>
+            <div className="px-6 py-4.5 border-b border-slate-200 dark:border-slate-800">
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block">Help Center</span>
+              <h4 className="text-sm font-black text-indigo-700 dark:text-indigo-400 mt-1">Support Desk</h4>
+            </div>
+            <div className="p-4 space-y-1.5">
+              <button
+                onClick={() => setActivePanel("support")}
+                className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                  activePanel === "support"
+                    ? "bg-slate-100 dark:bg-slate-800/80 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-sm border border-slate-200 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/30"
+                }`}
+              >
+                <HelpCircle className="w-4 h-4 shrink-0" />
+                My Tickets
+              </button>
+            </div>
+          </>
+        );
     }
   };
 
@@ -520,6 +546,23 @@ export default function AdminLayout({
               </button>
             );
           })}
+
+          <button
+            onClick={() => handleCategoryClick("support")}
+            className={`w-full py-3.5 rounded-xl flex items-center transition-all cursor-pointer ${
+              isPrimaryCollapsed ? "justify-center" : "px-4 gap-3.5"
+            } ${
+              activeCategory === "support"
+                ? "bg-indigo-600 text-white font-extrabold shadow-md scale-[1.02]"
+                : "hover:bg-white/5 text-slate-400 hover:text-slate-200"
+            }`}
+            title={isPrimaryCollapsed ? "Support Desk" : undefined}
+          >
+            <HelpCircle className="w-5 h-5 shrink-0" />
+            {!isPrimaryCollapsed && (
+              <span className="text-xs font-black tracking-tight animate-fadeIn">Support Desk</span>
+            )}
+          </button>
         </div>
 
         {/* Footer actions & Collapse toggle */}
@@ -611,6 +654,7 @@ export default function AdminLayout({
                 {activePanel === "settings-profile" && "Profile Identity Configuration"}
                 {activePanel === "settings-billing" && "Billing & Pricing tiers"}
                 {activePanel === "settings-security" && "Security credentials"}
+                {activePanel === "support" && "Support Desk"}
               </h2>
 
               {isTrialActive && (
