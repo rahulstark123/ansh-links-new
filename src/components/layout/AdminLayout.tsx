@@ -97,7 +97,7 @@ export default function AdminLayout({
 
   const daysLeft = getTrialDaysRemaining();
   const isTrialActive = profile.subscriptionStatus === "trial" && daysLeft > 0;
-  const isUpgraded = profile.subscriptionStatus === "active" || profile.verified;
+  const isUpgraded = profile.subscriptionStatus === "active";
   
   // Spotlight Command Palette State
   const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -583,7 +583,7 @@ export default function AdminLayout({
         {/* Top Header Panel */}
         <header className="h-24 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-8 flex items-center justify-between z-30">
           
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 sm:gap-8 min-w-0">
             {/* Mobile panel indicator */}
             <div className="flex items-center gap-3 md:hidden">
               <Link
@@ -593,24 +593,32 @@ export default function AdminLayout({
                 <ArrowLeft className="w-5 h-5" />
               </Link>
             </div>
-            
-            <h2 className="text-xs font-black capitalize tracking-widest uppercase hidden sm:block text-slate-500 dark:text-slate-400">
-              {activePanel === "dashboard" && "Analytics Overview"}
-              {activePanel === "traffic" && "Traffic Logs"}
-              {activePanel === "links" && "My Links"}
-              {activePanel === "canvas-edit" && "Customize Profile"}
-              {activePanel === "canvas-preview" && "Profile Preview"}
-              {activePanel === "redirects" && "Redirect Rules"}
-              {activePanel === "my-cards" && "My Digital Cards"}
-              {activePanel === "all-cards" && "Ready-Made Templates"}
-              {activePanel === "products" && "Product Workspace"}
-              {activePanel === "social-profile" && "Social Profiles Workspace"}
-              {activePanel === "custom-pages" && "Custom Sub-Pages"}
-              {activePanel === "integrations" && "API Connections"}
-              {activePanel === "settings-profile" && "Profile Identity Configuration"}
-              {activePanel === "settings-billing" && "Billing & Pricing tiers"}
-              {activePanel === "settings-security" && "Security credentials"}
-            </h2>
+
+            <div className="hidden sm:flex items-center gap-3 min-w-0">
+              <h2 className="text-xs font-black capitalize tracking-widest uppercase text-slate-500 dark:text-slate-400 truncate">
+                {activePanel === "dashboard" && "Analytics Overview"}
+                {activePanel === "traffic" && "Traffic Logs"}
+                {activePanel === "links" && "My Links"}
+                {activePanel === "canvas-edit" && "Customize Profile"}
+                {activePanel === "canvas-preview" && "Profile Preview"}
+                {activePanel === "redirects" && "Redirect Rules"}
+                {activePanel === "my-cards" && "My Digital Cards"}
+                {activePanel === "all-cards" && "Ready-Made Templates"}
+                {activePanel === "products" && "Product Workspace"}
+                {activePanel === "social-profile" && "Social Profiles Workspace"}
+                {activePanel === "custom-pages" && "Custom Sub-Pages"}
+                {activePanel === "integrations" && "API Connections"}
+                {activePanel === "settings-profile" && "Profile Identity Configuration"}
+                {activePanel === "settings-billing" && "Billing & Pricing tiers"}
+                {activePanel === "settings-security" && "Security credentials"}
+              </h2>
+
+              {isTrialActive && (
+                <span className="shrink-0 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/30 dark:border-amber-850">
+                  {daysLeft} {daysLeft === 1 ? "Day" : "Days"} Remaining
+                </span>
+              )}
+            </div>
 
             {/* Mock Search trigger opening Command Palette Modal */}
             <button
@@ -628,9 +636,9 @@ export default function AdminLayout({
           </div>
 
           {/* Right Header Navigation & Actions */}
-          <div className="flex items-center gap-5 font-sans">
+          <div className="flex items-center gap-3 sm:gap-5 font-sans shrink-0">
             {/* Trial & Subscription Status */}
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="flex items-center gap-2">
               {isUpgraded ? (
                 <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-850">
                   Pro Plan Active
@@ -642,7 +650,7 @@ export default function AdminLayout({
                   </span>
                   <button
                     onClick={() => setActivePanel("settings-billing")}
-                    className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline cursor-pointer uppercase"
+                    className="hidden sm:inline text-[9px] font-black text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline cursor-pointer uppercase"
                   >
                     Upgrade
                   </button>

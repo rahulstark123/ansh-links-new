@@ -15,10 +15,12 @@ import {
   CheckCircle2,
   Copy,
   XCircle,
+  Camera,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProfileEditModal from "./ProfileEditModal";
 import Link from "next/link";
+import { uploadCompressedImage } from "@/lib/upload-image";
 
 interface SettingsPanelProps {
   subTab: "profile" | "billing" | "security";
@@ -34,6 +36,8 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Billing states
   const [selectedPlan, setSelectedPlan] = useState<"free" | "pro" | "pro-plus">("free");
@@ -146,6 +150,20 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleAvatarUpload = async (file: File) => {
+    try {
+      setUploadingAvatar(true);
+      const url = await uploadCompressedImage(file, "avatar");
+      updateProfileInfo({ avatar: url });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload profile image.";
+      alert(message);
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
   const handlePasswordReset = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || newPassword !== confirmPassword) return;
@@ -188,7 +206,7 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
-                <div className="relative shrink-0">
+                <div className="relative shrink-0 group">
                   {profile.avatar ? (
                     <img
                       src={profile.avatar}
@@ -206,8 +224,35 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
                       {(profile.name || "A").charAt(0).toUpperCase()}
                     </div>
                   )}
+
+                  <label
+                    className={`absolute inset-0 rounded-3xl flex flex-col items-center justify-center gap-1 bg-black/50 text-white cursor-pointer transition-opacity ${
+                      uploadingAvatar ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {uploadingAvatar ? (
+                      <span className="text-[10px] font-black uppercase tracking-wider animate-pulse">Uploading...</span>
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5" />
+                        <span className="text-[9px] font-black uppercase tracking-wider">Change</span>
+                      </>
+                    )}
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingAvatar}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAvatarUpload(file);
+                      }}
+                    />
+                  </label>
+
                   {profile.verified && (
-                    <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-md">
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-md pointer-events-none">
                       <CheckCircle2 className="w-5 h-5 text-indigo-500" />
                     </div>
                   )}
@@ -230,6 +275,9 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
                   </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-md font-medium">
                     {profile.bio || "No bio added yet. Click the edit button to tell the world about yourself."}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-2 font-medium">
+                    Hover over your photo to change it · PNG or JPG, max 2 MB
                   </p>
                 </div>
               </div>
@@ -477,10 +525,10 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
 
       {subTab === "security" && (
         <div className="bg-white dark:bg-slate-900 border border-outline-variant/10 rounded-3xl p-8 shadow-sm space-y-6 transition-colors duration-300">
-          <div className="pb-4 border-b border-outline-variant/5 flex justify-between items-center">
-            <div className="space-y-1">
+          <div className="pb-4 border-b border-outline-variant/5 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+            <div className="space-y-1 min-w-0">
               <h3 className="font-black text-base flex items-center gap-2.5 text-indigo-700 dark:text-indigo-400">
-                <Shield className="w-5.5 h-5.5" />
+                <Shield className="w-5.5 h-5.5 shrink-0" />
                 Account Credentials
               </h3>
               <p className="text-xs text-slate-400">
@@ -489,7 +537,7 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
             </div>
 
             {passwordSuccess && (
-              <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-black uppercase tracking-wider animate-fadeIn">
+              <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-black uppercase tracking-wider animate-fadeIn shrink-0 self-start">
                 Password updated!
               </div>
             )}
@@ -500,15 +548,13 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
               <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5">
                 Current Password
               </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400">
-                  <Lock className="w-3.5 h-3.5" />
-                </span>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="premium-input-large text-xs pl-10"
+                  className="premium-input-large text-xs pl-11 w-full"
                   placeholder="••••••••"
                   required
                 />
@@ -519,15 +565,13 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
               <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5">
                 New Password
               </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400">
-                  <Key className="w-3.5 h-3.5" />
-                </span>
+              <div className="relative">
+                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="premium-input-large text-xs pl-10"
+                  className="premium-input-large text-xs pl-11 w-full"
                   placeholder="Minimum 8 characters"
                   required
                 />
@@ -538,15 +582,13 @@ export default function SettingsPanel({ subTab }: SettingsPanelProps) {
               <label className="text-xs font-black tracking-wider text-slate-400 dark:text-slate-500 uppercase block mb-1.5">
                 Confirm New Password
               </label>
-              <div className="relative flex items-center">
-                <span className="absolute left-3.5 text-slate-400">
-                  <Key className="w-3.5 h-3.5" />
-                </span>
+              <div className="relative">
+                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="premium-input-large text-xs pl-10"
+                  className="premium-input-large text-xs pl-11 w-full"
                   placeholder="Repeat new password"
                   required
                 />

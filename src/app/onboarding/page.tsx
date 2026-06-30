@@ -402,15 +402,15 @@ export default function OnboardingPage() {
                         const url = await uploadCompressedImage(file, "avatar");
                         setAvatarUrl(url);
                       } catch (err) {
-                        console.error(err);
-                        alert("Failed to upload profile image to Cloudflare R2.");
+                        const message = err instanceof Error ? err.message : "Failed to upload profile image.";
+                        alert(message);
                       } finally {
                         setUploadingAvatar(false);
                       }
                     }}
                   />
                 </label>
-                <span className="text-[9px] text-slate-400 font-medium">PNG or JPG, maximum size 5MB</span>
+                <span className="text-[9px] text-slate-400 font-medium">PNG or JPG, maximum size 2 MB</span>
               </div>
             </div>
 

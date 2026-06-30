@@ -413,8 +413,8 @@ export default function CanvasPanel({ linkId, onBack, previewOnly = false }: Can
                                       const url = await uploadCompressedImage(file, "avatar");
                                       updateProfileInfo({ avatar: url });
                                     } catch (err) {
-                                      console.error(err);
-                                      alert("Failed to upload avatar image to Cloudflare R2.");
+                                      const message = err instanceof Error ? err.message : "Failed to upload avatar image.";
+                                      alert(message);
                                     }
                                   }}
                                 />

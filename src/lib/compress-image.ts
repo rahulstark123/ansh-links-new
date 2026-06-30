@@ -1,4 +1,18 @@
+export const MAX_IMAGE_UPLOAD_SIZE = 2 * 1024 * 1024; // 2 MB
+
 export type ImageCompressPreset = "avatar" | "logo" | "general";
+
+/** Returns an error message when the file is invalid, otherwise null. */
+export function validateImageFile(file: File): string | null {
+  if (!file.type.startsWith("image/")) {
+    return "Please select a valid image file (PNG, JPG, or WebP).";
+  }
+  if (file.size > MAX_IMAGE_UPLOAD_SIZE) {
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    return `Image must be 2 MB or smaller. Your file is ${sizeMb} MB.`;
+  }
+  return null;
+}
 
 export interface CompressImageOptions {
   maxWidth?: number;

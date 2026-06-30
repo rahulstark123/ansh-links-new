@@ -1,9 +1,18 @@
-import { compressImageForUpload, ImageCompressPreset } from "@/lib/compress-image";
+import {
+  compressImageForUpload,
+  ImageCompressPreset,
+  validateImageFile,
+} from "@/lib/compress-image";
 
 export async function uploadCompressedImage(
   file: File,
   preset: ImageCompressPreset = "general"
 ): Promise<string> {
+  const validationError = validateImageFile(file);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   const compressed = await compressImageForUpload(file, preset);
   const formData = new FormData();
   formData.append("file", compressed);
